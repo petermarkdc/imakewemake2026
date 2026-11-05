@@ -1,0 +1,1382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ESP32-CAM Robot Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* Workshop bench: PCB-green accent, wheel-yellow step markers, cool grey paper. Sidebar course map + one module at a time. */
+  --paper:#f3f6f5; --panel:#ffffff; --ink:#15212b; --muted:#5a6873; --line:#d6dfdc;
+  --accent:#0b7a5c; --accent-ink:#ffffff; --accent-soft:#e1f1eb;
+  --mark:#f2b705; --mark-ink:#2a2100;
+  --warn:#b4231f; --warn-soft:#fbe9e7; --tip-soft:#fff6d6;
+  --code-bg:#0f1720; --code-ink:#dbe5ec; --code-line:#233140;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif;
+  --body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --radius:10px;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0f1519; --panel:#172026; --ink:#e4ecef; --muted:#9aabb4; --line:#2a3741;
+    --accent:#2fb88b; --accent-ink:#06140f; --accent-soft:#16352b;
+    --mark:#f2b705; --mark-ink:#2a2100;
+    --warn:#ff7a70; --warn-soft:#3a1d1b; --tip-soft:#332b0e;
+    --code-bg:#0a1015; --code-ink:#dbe5ec; --code-line:#1e2a35;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0f1519; --panel:#172026; --ink:#e4ecef; --muted:#9aabb4; --line:#2a3741;
+  --accent:#2fb88b; --accent-ink:#06140f; --accent-soft:#16352b;
+  --mark:#f2b705; --mark-ink:#2a2100;
+  --warn:#ff7a70; --warn-soft:#3a1d1b; --tip-soft:#332b0e;
+  --code-bg:#0a1015; --code-ink:#dbe5ec; --code-line:#1e2a35;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.6}
+a{color:var(--accent)}
+:focus-visible{outline:3px solid var(--mark);outline-offset:2px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(28px,4vw,40px);font-weight:800;letter-spacing:-.01em}
+h2{font-size:26px;font-weight:700;margin-top:8px}
+h3{font-size:20px;font-weight:700}
+h4{font-size:16px;font-weight:700}
+p{margin:0}
+code{font-family:var(--mono);font-size:.88em;background:var(--accent-soft);padding:1px 5px;border-radius:4px}
+kbd{font-family:var(--mono);font-size:.85em;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;padding:0 5px;background:var(--panel)}
+img{max-width:100%;height:auto;display:block}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--ink);color:var(--paper)}
+:root[data-theme="dark"] .topbar{background:#0a0f12}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .topbar{background:#0a0f12}}
+.brand{font-family:var(--display);font-weight:800;font-size:18px;letter-spacing:.01em;display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
+.brand .dot{width:12px;height:12px;border-radius:50%;background:var(--mark);box-shadow:0 0 0 3px rgba(242,183,5,.25)}
+.brand small{font-family:var(--body);font-weight:500;font-size:13px;opacity:.7}
+.topbar .spacer{flex:1}
+.team-chip{font-size:13px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:inherit;border-radius:999px;padding:5px 12px;cursor:pointer;font-family:var(--body)}
+.team-chip b{color:var(--mark)}
+.menu-btn{display:none;background:none;border:1px solid rgba(255,255,255,.3);color:inherit;border-radius:8px;padding:5px 10px;font-size:14px;cursor:pointer}
+
+/* ---------- layout ---------- */
+.shell{display:grid;grid-template-columns:270px minmax(0,1fr);min-height:calc(100% - 52px)}
+nav.side{border-right:1px solid var(--line);background:var(--panel);padding:18px 12px;position:sticky;top:52px;align-self:start;height:calc(100vh - 52px);overflow:auto}
+nav.side .label{font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);padding:0 10px 8px}
+nav.side a{display:grid;grid-template-columns:30px 1fr auto;align-items:center;gap:8px;padding:9px 10px;border-radius:8px;color:var(--ink);text-decoration:none;font-weight:500}
+nav.side a:hover{background:var(--accent-soft)}
+nav.side a.active{background:var(--accent);color:var(--accent-ink)}
+nav.side .num{font-family:var(--display);font-weight:800;font-size:13px;width:26px;height:26px;border-radius:7px;display:grid;place-items:center;background:var(--paper);border:1px solid var(--line);color:var(--ink)}
+nav.side a.active .num{background:var(--mark);color:var(--mark-ink);border-color:var(--mark)}
+nav.side .prog{font-size:12px;font-variant-numeric:tabular-nums;color:var(--muted)}
+nav.side a.active .prog{color:var(--accent-ink);opacity:.85}
+nav.side .prog.done{color:var(--accent);font-weight:600}
+nav.side hr{border:0;border-top:1px solid var(--line);margin:12px 6px}
+main{padding:28px clamp(16px,4vw,48px) 80px;max-width:1040px;width:100%}
+section.module{display:none}
+section.module.show{display:block}
+.stack{display:flex;flex-direction:column;gap:18px}
+.lede{font-size:18px;color:var(--muted);max-width:68ch}
+.prose{max-width:72ch}
+.eyebrow{font-family:var(--display);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.1em;color:var(--accent)}
+
+/* ---------- cards ---------- */
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:20px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.figure{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:10px;overflow:hidden}
+.figure figcaption{font-size:13px;color:#5a6873;padding:8px 4px 2px}
+figure{margin:0}
+
+/* roadmap */
+.road{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;counter-reset:r}
+.road a{display:flex;flex-direction:column;gap:4px;text-decoration:none;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;border-top:4px solid var(--accent)}
+.road a:hover{border-color:var(--accent)}
+.road b{font-family:var(--display);font-size:16px}
+.road span{font-size:13px;color:var(--muted)}
+
+/* steps */
+ol.steps{list-style:none;padding:0;margin:0;counter-reset:s;display:flex;flex-direction:column;gap:12px}
+ol.steps>li{counter-increment:s;display:grid;grid-template-columns:34px 1fr;gap:12px;align-items:start}
+ol.steps>li::before{content:counter(s);font-family:var(--display);font-weight:800;width:30px;height:30px;border-radius:50%;background:var(--mark);color:var(--mark-ink);display:grid;place-items:center;font-size:15px;margin-top:-2px}
+ol.steps>li>div{display:flex;flex-direction:column;gap:8px;min-width:0}
+ul.plain{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+
+/* callouts */
+.callout{border-radius:var(--radius);padding:14px 16px;display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:start;border:1px solid var(--line)}
+.callout .tag{font-family:var(--display);font-weight:800;font-size:12px;text-transform:uppercase;letter-spacing:.08em;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.callout.tip{background:var(--tip-soft)} .callout.tip .tag{background:var(--mark);color:var(--mark-ink)}
+.callout.warn{background:var(--warn-soft)} .callout.warn .tag{background:var(--warn);color:#fff}
+.callout.check{background:var(--accent-soft)} .callout.check .tag{background:var(--accent);color:var(--accent-ink)}
+.callout>div{display:flex;flex-direction:column;gap:6px}
+
+/* lab card */
+.lab{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.lab-head{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:16px 20px;border-bottom:1px solid var(--line);background:linear-gradient(0deg,transparent,var(--accent-soft))}
+.lab-head .labno{font-family:var(--display);font-weight:800;background:var(--ink);color:var(--paper);border-radius:7px;padding:3px 9px;font-size:13px;letter-spacing:.04em}
+.lab-head h3{flex:1;min-width:200px}
+.lab-head .time{font-size:13px;color:var(--muted)}
+.lab-body{padding:20px;display:flex;flex-direction:column;gap:16px}
+.done-toggle{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;cursor:pointer;border:1px solid var(--line);border-radius:999px;padding:5px 12px;background:var(--panel);color:var(--ink);font-family:var(--body)}
+.done-toggle input{accent-color:var(--accent);width:16px;height:16px;margin:0}
+.lab.is-done .lab-head{background:linear-gradient(0deg,transparent,var(--accent-soft)),var(--accent-soft)}
+.lab.is-done .done-toggle{border-color:var(--accent);color:var(--accent)}
+.goal{font-size:15px;color:var(--muted)}
+.goal b{color:var(--ink)}
+
+/* code block */
+.code{border-radius:10px;overflow:hidden;background:var(--code-bg);border:1px solid var(--code-line)}
+.code-bar{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 14px;background:#16212c;border-bottom:1px solid var(--code-line);color:#9fb3c2;font-size:13px}
+.code-bar .fname{font-family:var(--mono);color:#e8f0f5;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+.code-bar .lang{font-size:11px;text-transform:uppercase;letter-spacing:.08em;border:1px solid #33475a;border-radius:5px;padding:1px 6px}
+.btn{font-family:var(--body);font-size:13px;font-weight:600;border-radius:7px;padding:6px 12px;cursor:pointer;border:1px solid transparent;display:inline-flex;align-items:center;gap:6px;text-decoration:none;line-height:1.2}
+.btn-copy{background:var(--mark);color:var(--mark-ink)}
+.btn-copy:hover{filter:brightness(1.07)}
+.btn-copy.ok{background:#2fb88b;color:#05140e}
+.btn-ghost{background:transparent;color:#cfe0eb;border-color:#3a5063}
+.btn-ghost:hover{border-color:#cfe0eb}
+.btn-primary{background:var(--accent);color:var(--accent-ink)}
+.btn-outline{background:var(--panel);color:var(--ink);border-color:var(--line)}
+.btn-outline:hover{border-color:var(--accent)}
+.code pre{margin:0;padding:14px 16px;overflow:auto;max-height:440px;font-family:var(--mono);font-size:13.5px;line-height:1.55;color:var(--code-ink);tab-size:2}
+.code.expanded pre{max-height:none}
+.code pre code{background:none;padding:0;font-size:inherit;color:inherit;white-space:pre}
+.code.short pre{max-height:none}
+.code-foot{display:flex;justify-content:center;border-top:1px solid var(--code-line)}
+.code-foot button{background:none;border:0;color:#9fb3c2;font-family:var(--body);font-size:13px;padding:7px;cursor:pointer;width:100%}
+.code-foot button:hover{color:#fff}
+.code.short .code-foot{display:none}
+/* prism tokens */
+.token.comment,.token.prolog{color:#7f93a3;font-style:italic}
+.token.string,.token.char{color:#a6e3a1}
+.token.keyword,.token.directive,.token.macro .token.directive-hash{color:#f5c26b}
+.token.number,.token.boolean{color:#fab387}
+.token.function{color:#89c2ff}
+.token.property{color:#89dceb}
+.token.operator,.token.punctuation{color:#b8c7d3}
+.token.macro{color:#cba6f7}
+.token.class-name{color:#89dceb}
+.token.selector,.token.key,.token.attr-name{color:#89dceb}
+
+/* tables */
+.tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+table{border-collapse:collapse;width:100%;font-size:14.5px}
+th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-family:var(--display);font-weight:700;font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);background:var(--paper)}
+tr:last-child td{border-bottom:0}
+td.mono,.mono{font-family:var(--mono);font-size:13.5px;font-variant-numeric:tabular-nums}
+.wire{display:inline-block;width:26px;height:8px;border-radius:4px;vertical-align:middle;margin-right:6px;border:1px solid rgba(0,0,0,.25)}
+
+/* direction explorer */
+.explorer{display:grid;grid-template-columns:minmax(0,1fr) 220px;gap:18px;align-items:center}
+.dir-btns{display:flex;flex-wrap:wrap;gap:8px}
+.dir-btns button{font-family:var(--body);font-weight:600;font-size:14px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+.dir-btns button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+#dirTable tr.hl td{background:var(--tip-soft);font-weight:600}
+.robot-svg text{font-family:var(--display);font-weight:800}
+
+/* settings */
+.settings-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.field{display:flex;flex-direction:column;gap:4px}
+.field label{font-size:13px;font-weight:600;color:var(--muted)}
+.field input{font-family:var(--mono);font-size:14px;padding:9px 10px;border-radius:8px;border:1px solid var(--line);background:var(--paper);color:var(--ink)}
+.field input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
+.settings-card{border-left:5px solid var(--mark)}
+
+/* pager */
+.pager{display:flex;justify-content:space-between;gap:12px;margin-top:36px;padding-top:20px;border-top:1px solid var(--line)}
+.pager a{display:flex;flex-direction:column;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--panel);border-radius:var(--radius);padding:10px 16px;min-width:0}
+.pager a:hover{border-color:var(--accent)}
+.pager small{color:var(--muted);font-size:12px}
+.pager b{font-family:var(--display)}
+.pager .next{text-align:right;margin-left:auto}
+
+details.more{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+details.more summary{cursor:pointer;padding:12px 16px;font-weight:600}
+details.more>div{padding:0 16px 16px;display:flex;flex-direction:column;gap:12px}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(120px);background:var(--ink);color:var(--paper);padding:10px 18px;border-radius:999px;font-size:14px;font-weight:600;transition:transform .25s ease;z-index:50;max-width:calc(100% - 32px);text-align:center}
+.toast.show{transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion: reduce){.toast{transition:none}}
+video{width:100%;border-radius:var(--radius);background:#000}
+.dl-row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.dl-item{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:center;padding:14px 16px;border:1px solid var(--line);border-radius:var(--radius);background:var(--panel)}
+.dl-item b{font-family:var(--display)}
+.dl-item small{display:block;color:var(--muted);font-size:13px}
+.mqtt-svg text{font-family:var(--body)}
+
+/* PDF menu + export mode */
+.pdf-wrap{position:relative}
+.pdf-menu{position:absolute;right:0;top:calc(100% + 8px);background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 30px rgba(0,0,0,.25);padding:6px;width:250px;display:flex;flex-direction:column;gap:2px;z-index:40}
+.pdf-menu[hidden]{display:none}
+.pdf-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;background:none;border:0;border-radius:7px;padding:9px 10px;cursor:pointer;color:var(--ink);font-family:var(--body);font-size:14px}
+.pdf-menu button:hover,.pdf-menu button:focus-visible{background:var(--accent-soft)}
+.pdf-menu small{color:var(--muted);font-size:12px}
+.pdf-overlay{position:fixed;inset:0;z-index:100;background:rgba(15,21,25,.88);color:#fff;display:grid;place-items:center;text-align:center;padding:24px}
+.pdf-overlay[hidden]{display:none}
+.pdf-overlay b{font-family:var(--display);font-size:22px;display:block;margin-bottom:6px}
+.pdf-overlay .bar{width:260px;max-width:80vw;height:8px;border-radius:4px;background:rgba(255,255,255,.2);margin:14px auto 0;overflow:hidden}
+.pdf-overlay .bar i{display:block;height:100%;width:0;background:var(--mark);transition:width .2s}
+body.pdf-mode{--paper:#ffffff}
+body.pdf-mode .shell{display:block}
+body.pdf-mode nav.side{display:none}
+body.pdf-mode main{width:860px;max-width:none;padding:0}
+body.pdf-mode .code pre{max-height:none}
+body.pdf-mode .code pre code{white-space:pre-wrap;word-break:break-word}
+body.pdf-mode .explorer{grid-template-columns:minmax(0,1fr) 220px}
+body.pdf-mode .grid2{grid-template-columns:1fr 1fr}
+
+@media (max-width:860px){
+  .shell{grid-template-columns:1fr}
+  nav.side{position:fixed;top:52px;left:0;bottom:0;height:auto;width:280px;transform:translateX(-100%);transition:transform .2s;z-index:30;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+  nav.side.open{transform:none}
+  .menu-btn{display:inline-block}
+  .explorer{grid-template-columns:1fr}
+  .brand small{display:none}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <button class="menu-btn" id="menuBtn" aria-controls="sideNav" aria-expanded="false">Menu</button>
+  <a class="brand" href="#start"><span class="dot"></span>Robot Lab <small>ESP32-CAM · Motors · MQTT · Node-RED</small></a>
+  <span class="spacer"></span>
+  <div class="pdf-wrap">
+    <button class="team-chip" id="pdfBtn" aria-haspopup="true" aria-expanded="false" aria-controls="pdfMenu">Save as PDF ▾</button>
+    <div class="pdf-menu" id="pdfMenu" hidden>
+      <button type="button" data-pdf="page"><b>This page</b><small>The module you're reading now</small></button>
+      <button type="button" data-pdf="all"><b>Whole course</b><small>All modules + cheat sheet in one file</small></button>
+    </div>
+  </div>
+  <button class="team-chip" id="teamChip" title="Change your team settings">Team <b id="teamChipName">team01</b> · settings</button>
+</header>
+
+<div class="shell">
+<nav class="side" id="sideNav" aria-label="Course modules">
+  <div class="label">Course map</div>
+  <a href="#start" data-nav="start"><span class="num">0</span><span>Start here</span><span class="prog" data-prog="start"></span></a>
+  <a href="#setup" data-nav="setup"><span class="num">1</span><span>Set up your PC</span><span class="prog" data-prog="setup"></span></a>
+  <a href="#esp32" data-nav="esp32"><span class="num">2</span><span>ESP32-CAM basics</span><span class="prog" data-prog="esp32"></span></a>
+  <a href="#motors" data-nav="motors"><span class="num">3</span><span>Motors &amp; wiring</span><span class="prog" data-prog="motors"></span></a>
+  <a href="#remote" data-nav="remote"><span class="num">4</span><span>Phone &amp; PC control</span><span class="prog" data-prog="remote"></span></a>
+  <a href="#mqtt" data-nav="mqtt"><span class="num">5</span><span>MQTT</span><span class="prog" data-prog="mqtt"></span></a>
+  <a href="#nodered" data-nav="nodered"><span class="num">6</span><span>Node-RED control</span><span class="prog" data-prog="nodered"></span></a>
+  <hr>
+  <a href="#reference" data-nav="reference"><span class="num">R</span><span>Cheat sheet &amp; files</span><span class="prog"></span></a>
+</nav>
+
+<main id="main">
+
+<!-- ======================================================= 0 START -->
+<section class="module" id="m-start" data-route="start">
+<div class="stack">
+  <div class="eyebrow">Module 0 · Start here</div>
+  <h1>Build a WiFi camera robot, then drive it with MQTT and Node-RED</h1>
+  <p class="lede">A step-by-step workshop for the ESP32 Camera 4WD Robot Car Kit. Every lab has code you can copy with one click. Work through the modules in order; each one builds on the last.</p>
+
+  <div class="road">
+    <a href="#setup"><b>1 · Set up</b><span>Arduino IDE, ESP32 boards, USB driver</span></a>
+    <a href="#esp32"><b>2 · ESP32-CAM</b><span>LEDs, Serial, WiFi, live camera</span></a>
+    <a href="#motors"><b>3 · Motors</b><span>L298N driver, wiring, PWM speed</span></a>
+    <a href="#remote"><b>4 · Remote</b><span>Drive from a phone or PC browser</span></a>
+    <a href="#mqtt"><b>5 · MQTT</b><span>Broker, topics, publish/subscribe</span></a>
+    <a href="#nodered"><b>6 · Node-RED</b><span>Flows and a control dashboard</span></a>
+  </div>
+
+  <div class="card settings-card stack" id="settingsCard">
+    <div>
+      <h3>Your team settings</h3>
+      <p class="goal">Fill these in once. Every code block on this site updates with your values, so the code you copy is ready to upload. Your instructor will give you the team ID, WiFi and broker address.</p>
+    </div>
+    <div class="settings-grid">
+      <div class="field"><label for="setTeam">Team ID (letters/numbers)</label><input id="setTeam" autocomplete="off" spellcheck="false" value="team01"></div>
+      <div class="field"><label for="setSsid">Classroom WiFi name</label><input id="setSsid" autocomplete="off" spellcheck="false" value="ClassroomWiFi"></div>
+      <div class="field"><label for="setPass">Classroom WiFi password</label><input id="setPass" autocomplete="off" spellcheck="false" value="password123"></div>
+      <div class="field"><label for="setBroker">MQTT broker IP address</label><input id="setBroker" autocomplete="off" spellcheck="false" value="192.168.1.100"></div>
+    </div>
+    <p class="goal" id="settingsNote">Saved in this browser only.</p>
+  </div>
+
+  <h2>What's in the kit</h2>
+  <div class="grid2">
+    <figure class="figure"><img src="assets/kit-contents.jpg" alt="All parts of the ESP32 Camera 4WD Robot Car Kit laid out" loading="lazy"><figcaption>Kit contents (from the kit manual)</figcaption></figure>
+    <div class="stack">
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Part</th><th>Qty</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>ESP32-CAM board + USB adapter</td><td class="mono">1</td><td>The brain: WiFi, Bluetooth and a camera</td></tr>
+          <tr><td>L298N motor driver</td><td class="mono">1</td><td>Lets the small ESP32 signals switch big motor currents</td></tr>
+          <tr><td>TT DC gear motors + wheels</td><td class="mono">4</td><td>Move the robot (wired as a left pair and a right pair)</td></tr>
+          <tr><td>External WiFi antenna</td><td class="mono">1</td><td>Longer WiFi range</td></tr>
+          <tr><td>18650 Li-ion batteries</td><td class="mono">3</td><td>About 11.1–12.6 V for the motors and board (often bought separately)</td></tr>
+          <tr><td>USB cable</td><td class="mono">1</td><td>Uploads code from your PC</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout warn"><span class="tag">Safety</span><div>
+        <p>18650 batteries store a lot of energy. Insert them the right way round (check + and −), never short the terminals, switch the robot off when you are not using it, and only charge them in a proper 18650 charger with someone watching.</p>
+      </div></div>
+    </div>
+  </div>
+
+  <h2>Watch the robot in action</h2>
+  <div class="card stack" id="videoCard">
+    <div id="videoList" class="stack"></div>
+    <div class="stack">
+      <p class="goal">Have the kit folder on your computer? Open <b>Tutorial Video › Demo Video › Demo Video.mp4</b> here to play it on this page.</p>
+      <div class="dl-row"><label class="btn btn-outline" for="localVideo">Choose a video file…</label><input type="file" id="localVideo" accept="video/*" hidden><span id="localVideoName" class="goal"></span></div>
+      <video id="localPlayer" controls hidden></video>
+    </div>
+  </div>
+
+  <h2>How to use this site</h2>
+  <div class="grid3">
+    <div class="card"><h4>Copy</h4><p class="goal">The yellow <b>Copy</b> button copies a whole code block. Paste it into a new Arduino sketch with <kbd>Ctrl</kbd>+<kbd>V</kbd>.</p></div>
+    <div class="card"><h4>Download</h4><p class="goal"><b>Download</b> gives you a .zip with a ready-made sketch folder. Unzip it and open the .ino in Arduino IDE.</p></div>
+    <div class="card"><h4>Tick it off</h4><p class="goal">Press <b>Mark done</b> when a lab works. Your progress shows in the course map on the left.</p></div>
+  </div>
+</div>
+<div class="pager"><a class="next" href="#setup"><small>Next</small><b>1 · Set up your PC →</b></a></div>
+</section>
+
+<!-- ======================================================= 1 SETUP -->
+<section class="module" id="m-setup" data-route="setup">
+<div class="stack">
+  <div class="eyebrow">Module 1</div>
+  <h1>Set up your PC</h1>
+  <p class="lede">You need three things before you can upload code: the Arduino IDE, the ESP32 board package, and the CH340 USB driver. Do this once per computer.</p>
+
+  <article class="lab" data-lab="setup-ide" data-mod="setup">
+    <div class="lab-head"><span class="labno">STEP A</span><h3>Install Arduino IDE 2</h3><span class="time">≈ 10 min</span></div>
+    <div class="lab-body">
+      <ol class="steps">
+        <li><div><p>Go to <a href="https://www.arduino.cc/en/software" target="_blank" rel="noopener">arduino.cc/en/software</a> and download <b>Arduino IDE 2.x</b> for your system (Windows, macOS or Linux).</p></div></li>
+        <li><div><p>Run the installer and accept the defaults. If Windows asks to install USB drivers, click <b>Install</b>.</p></div></li>
+        <li><div><p>Open Arduino IDE. You should see an empty sketch with <code>setup()</code> and <code>loop()</code>.</p></div></li>
+      </ol>
+      <div class="callout tip"><span class="tag">Tip</span><div><p>Already have an old Arduino IDE 1.x? The kit manual recommends uninstalling it and installing the latest version.</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="setup-board" data-mod="setup">
+    <div class="lab-head"><span class="labno">STEP B</span><h3>Add ESP32 boards</h3><span class="time">≈ 10 min</span></div>
+    <div class="lab-body">
+      <ol class="steps">
+        <li><div><p>Click the <b>Boards Manager</b> icon on the left side (or <b>Tools › Board › Boards Manager…</b>).</p></div></li>
+        <li><div><p>Type <code>esp32</code> in the search box. Find <b>esp32 by Espressif Systems</b>.</p></div></li>
+        <li><div><p>Pick version <b>3.1.0</b> (the version the kit was tested with; newer 3.x versions also work with this site's code) and click <b>INSTALL</b>. It downloads a lot, so give it a few minutes.</p></div></li>
+        <li><div><p>Wait for <b>"Successfully installed platform esp32"</b> in the Output panel.</p></div></li>
+      </ol>
+      <details class="more"><summary>esp32 doesn't show up in the search?</summary><div>
+        <p>Open <b>File › Preferences</b>, paste this URL into <b>Additional boards manager URLs</b>, click OK, then search again.</p>
+        <div class="code short" data-snippet="boardsurl"></div>
+      </div></details>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="setup-driver" data-mod="setup">
+    <div class="lab-head"><span class="labno">STEP C</span><h3>Install the CH340 USB driver</h3><span class="time">≈ 5 min</span></div>
+    <div class="lab-body">
+      <p class="prose">The USB adapter under the ESP32-CAM uses a <b>CH340</b> chip to turn USB into serial. Windows needs a driver for it, otherwise no COM port appears.</p>
+      <ol class="steps">
+        <li><div><p>Download <b>CH341SER</b> from the chip maker's site: <a href="https://www.wch-ic.com/downloads/CH341SER_EXE.html" target="_blank" rel="noopener">wch-ic.com › CH341SER</a> (Windows). Mac and Linux usually work without a driver.</p></div></li>
+        <li><div><p>Plug the ESP32-CAM adapter into your PC with the USB cable, run the installer and click <b>INSTALL</b>. You should see <b>"Driver install success!"</b></p></div></li>
+        <li><div><p>Open <b>Device Manager</b> (search for it in the Start menu) › <b>Ports (COM &amp; LPT)</b>. You should see <b>USB-SERIAL CH340 (COMx)</b>. Remember the number.</p></div></li>
+      </ol>
+      <div class="callout warn"><span class="tag">No port?</span><div>
+        <ul class="plain">
+          <li>Try a different USB cable. Many cables only carry power, not data.</li>
+          <li>Try another USB socket or another computer.</li>
+          <li>Uninstall the driver, restart the PC, and install again.</li>
+        </ul>
+      </div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="setup-upload" data-mod="setup">
+    <div class="lab-head"><span class="labno">STEP D</span><h3>Your upload checklist</h3><span class="time">use every time</span></div>
+    <div class="lab-body">
+      <figure class="figure"><img src="assets/usb-upload.jpg" alt="USB cable plugged into the ESP32-CAM adapter on the robot" loading="lazy"><figcaption>Plug the USB cable into the adapter board under the ESP32-CAM.</figcaption></figure>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Setting</th><th>Choose</th></tr></thead>
+        <tbody>
+          <tr><td>Tools › Board</td><td><b>esp32 › AI Thinker ESP32-CAM</b></td></tr>
+          <tr><td>Tools › Port</td><td>The <b>COMx</b> you saw in Device Manager</td></tr>
+          <tr><td>Serial Monitor speed</td><td class="mono">115200 baud</td></tr>
+          <tr><td>Upload</td><td>Click the round <b>→</b> button and wait for <b>"Done uploading"</b></td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout tip"><span class="tag">Upload fails?</span><div>
+        <ul class="plain">
+          <li><b>"Failed to connect… wrong boot mode"</b>: hold the <b>IO0</b> button on the adapter, press and release <b>RST</b>, release IO0, then click Upload again. Press RST after "Done uploading".</li>
+          <li><b>Brownout / keeps resetting</b>: your PC's USB port can't supply enough power. Switch the robot's battery on while uploading (wheels off the table!).</li>
+          <li><b>Port is greyed out</b>: close the Serial Monitor in any other window, then try again.</li>
+        </ul>
+      </div></div>
+    </div>
+  </article>
+</div>
+<div class="pager"><a href="#start"><small>Back</small><b>← Start here</b></a><a class="next" href="#esp32"><small>Next</small><b>2 · ESP32-CAM basics →</b></a></div>
+</section>
+
+<!-- ======================================================= 2 ESP32 -->
+<section class="module" id="m-esp32" data-route="esp32">
+<div class="stack">
+  <div class="eyebrow">Module 2</div>
+  <h1>ESP32-CAM basics</h1>
+  <p class="lede">Get to know the board before it drives anything. You'll print messages, blink LEDs, scan for WiFi and stream live video.</p>
+
+  <div class="grid2">
+    <figure class="figure"><img src="assets/esp32cam-pinout.jpg" alt="ESP32-CAM pinout showing GPIO 4, 2, 14, 15, 13, 12, 0, 16, 1, 3 and power pins" loading="lazy"><figcaption>ESP32-CAM pins. The robot uses IO12, IO13, IO14, IO15 for the motors.</figcaption></figure>
+    <div class="card stack">
+      <h3>Board tour</h3>
+      <div class="tbl-wrap"><table>
+        <tbody>
+          <tr><td>Chip</td><td>ESP32 (dual core, up to 240 MHz), 4 MB PSRAM</td></tr>
+          <tr><td>Wireless</td><td>WiFi 802.11 b/g/n + Bluetooth 4.2 / BLE</td></tr>
+          <tr><td>Camera</td><td>OV3660 on this kit (3 MP)</td></tr>
+          <tr><td class="mono">GPIO 4</td><td>White flash LED (very bright)</td></tr>
+          <tr><td class="mono">GPIO 33</td><td>Small red LED, on when LOW</td></tr>
+          <tr><td class="mono">GPIO 12–15</td><td>Free pins → motor driver</td></tr>
+          <tr><td>RST button</td><td>Restarts your program</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+  </div>
+
+  <article class="lab" data-lab="L1" data-mod="esp32">
+    <div class="lab-head"><span class="labno">LAB 1</span><h3>Hello ESP32-CAM</h3><span class="time">≈ 10 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> upload your first sketch and read messages from the board in the Serial Monitor.</p>
+      <ol class="steps">
+        <li><div><p>In Arduino IDE choose <b>File › New Sketch</b>, delete everything, and paste the code below.</p></div></li>
+        <li><div><p>Check Board = <b>AI Thinker ESP32-CAM</b> and the right Port, then click <b>Upload</b>.</p></div></li>
+        <li><div><p>Open <b>Tools › Serial Monitor</b> and set the speed to <b>115200 baud</b>. Press <b>RST</b> on the board if the screen is empty.</p></div></li>
+      </ol>
+      <div class="code" data-snippet="L1"></div>
+      <div class="callout check"><span class="tag">You should see</span><div><p>"Hello from my ESP32-CAM!" followed by the chip model, CPU speed, PSRAM size (about 4096 KB) and MAC address every second.</p></div></div>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Change <code>delay(1000)</code> to <code>delay(250)</code>. What happens? Write your own name into the first message.</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L2" data-mod="esp32">
+    <div class="lab-head"><span class="labno">LAB 2</span><h3>Blink the red LED</h3><span class="time">≈ 10 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> control an output pin with <code>digitalWrite()</code>. This LED is "active LOW", which surprises everyone the first time.</p>
+      <div class="code" data-snippet="L2"></div>
+      <div class="callout check"><span class="tag">You should see</span><div><p>The tiny red LED on the back of the ESP32-CAM blinks twice per second.</p></div></div>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Make it blink an SOS: three short, three long, three short.</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L3" data-mod="esp32">
+    <div class="lab-head"><span class="labno">LAB 3</span><h3>Fade the flash LED with PWM</h3><span class="time">≈ 15 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> learn <b>PWM</b>, the same trick we'll use later to control motor speed.</p>
+      <p class="prose">PWM switches a pin on and off thousands of times per second. The <b>duty</b> (0–255) is how much of each cycle the pin is ON. 0 = always off, 128 = half the time, 255 = always on. The LED (or motor) only "feels" the average.</p>
+      <div class="code" data-snippet="L3"></div>
+      <div class="callout warn"><span class="tag">Eyes</span><div><p>The flash LED is extremely bright at full power. Keep <code>MAX_BRIGHTNESS</code> low and don't look straight into it.</p></div></div>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Make the LED "breathe" faster or slower by changing <code>delay(20)</code>.</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L4" data-mod="esp32">
+    <div class="lab-head"><span class="labno">LAB 4</span><h3>WiFi scanner</h3><span class="time">≈ 10 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> first wireless lab. See every network around you and how strong it is.</p>
+      <div class="code" data-snippet="L4"></div>
+      <div class="callout check"><span class="tag">You should see</span><div><p>A numbered list of networks every 5 seconds. Find your classroom WiFi. Is the signal better than −70 dBm?</p></div></div>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Screw on the external antenna and compare the numbers. (Some boards need a tiny jumper resistor moved to use the antenna; ask your instructor.)</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L5" data-mod="esp32">
+    <div class="lab-head"><span class="labno">LAB 5</span><h3>Live camera web server</h3><span class="time">≈ 20 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> stream live video from the robot's camera to a browser on the classroom WiFi. This uses an example that comes with the ESP32 package.</p>
+      <ol class="steps">
+        <li><div><p>Open <b>File › Examples › ESP32 › Camera › CameraWebServer</b>.</p></div></li>
+        <li><div><p>Find the <b>Select camera model</b> lines (in the main tab, or in the <b>board_config.h</b> tab on newer versions). Switch off the model that's on and switch on <b>AI_THINKER</b>:</p><div class="code short" data-snippet="cam_model"></div></div></li>
+        <li><div><p>Find the WiFi lines near the top of the main tab and replace them with:</p><div class="code short" data-snippet="cam_wifi"></div></div></li>
+        <li><div><p>Upload. Open the Serial Monitor (115200) and press <b>RST</b>. Wait for <b>Camera Ready! Use 'http://192.168.x.x' to connect</b>.</p></div></li>
+        <li><div><p>On a phone or laptop <b>on the same WiFi</b>, open that address and click <b>Start Stream</b>.</p></div></li>
+      </ol>
+      <div class="callout tip"><span class="tag">Notice</span><div><p>Here the ESP32 <b>joins</b> an existing WiFi network (station mode). In Module 4 the robot <b>makes its own</b> hotspot (access-point mode). Both are useful.</p></div></div>
+      <div class="callout warn"><span class="tag">Problems?</span><div><ul class="plain"><li><b>"Camera init failed"</b>: the camera model is wrong, or the ribbon cable is loose. Reseat it gently.</li><li><b>"Sketch too big"</b>: Tools › Partition Scheme › <b>Huge APP</b>.</li><li>Dots forever after "WiFi connecting": check the WiFi name/password in your team settings (they are case-sensitive). ESP32 only uses 2.4 GHz WiFi.</li></ul></div></div>
+    </div>
+  </article>
+</div>
+<div class="pager"><a href="#setup"><small>Back</small><b>← 1 · Set up your PC</b></a><a class="next" href="#motors"><small>Next</small><b>3 · Motors &amp; wiring →</b></a></div>
+</section>
+
+<!-- ======================================================= 3 MOTORS -->
+<section class="module" id="m-motors" data-route="motors">
+<div class="stack">
+  <div class="eyebrow">Module 3</div>
+  <h1>Motors &amp; wiring</h1>
+  <p class="lede">The ESP32 can't power a motor directly: its pins give a few milliamps at 3.3 V, and a motor wants hundreds of milliamps. The <b>L298N</b> driver sits in between, like a set of electronic switches.</p>
+
+  <div class="grid2">
+    <figure class="figure"><img src="assets/robot-parts.jpg" alt="Assembled robot labelled: ESP32 camera module, L298N motor drive module, external antenna, battery case, TT motor" loading="lazy"><figcaption>The assembled robot and its main parts.</figcaption></figure>
+    <figure class="figure"><img src="assets/l298n-pinout.jpg" alt="L298N pinout: OUT1, OUT2 for motor A, OUT3, OUT4 for motor B, +12V, GND, +5V, jumper, ENA, IN1 to IN4, ENB" loading="lazy"><figcaption>L298N pins. Keep the 5 V jumper and the ENA/ENB caps in place.</figcaption></figure>
+  </div>
+
+  <article class="lab" data-lab="wiring" data-mod="motors">
+    <div class="lab-head"><span class="labno">BUILD</span><h3>Wire the robot</h3><span class="time">≈ 30 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> connect the battery, the L298N, the four motors and the ESP32-CAM exactly like the kit diagram. Batteries OUT while you wire.</p>
+      <figure class="figure"><img src="assets/wiring-diagram.jpg" alt="Kit wiring diagram: battery through switch to L298N 12V and GND; motors M3 and M4 to OUT1/OUT2, M1 and M2 to OUT3/OUT4; ESP32-CAM adapter 5V, GND, IO12, IO13, IO15, IO14 to L298N 5V, GND, IN4, IN3, IN2, IN1" loading="lazy"><figcaption>Kit wiring diagram. Two motors share each L298N output: one pair per side.</figcaption></figure>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>From (ESP32-CAM adapter)</th><th>Wire in diagram</th><th>To (L298N)</th><th>Job</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">5V</td><td><span class="wire" style="background:#d62828"></span>red</td><td class="mono">5V</td><td>Powers the ESP32-CAM from the L298N's regulator</td></tr>
+          <tr><td class="mono">GND</td><td><span class="wire" style="background:#111"></span>black</td><td class="mono">GND</td><td>Shared ground (must be connected!)</td></tr>
+          <tr><td class="mono">IO14</td><td><span class="wire" style="background:#f07c28"></span>orange</td><td class="mono">IN1</td><td>Motor A (OUT1/OUT2) direction</td></tr>
+          <tr><td class="mono">IO15</td><td><span class="wire" style="background:#2b9fe0"></span>blue</td><td class="mono">IN2</td><td>Motor A (OUT1/OUT2) direction</td></tr>
+          <tr><td class="mono">IO13</td><td><span class="wire" style="background:#c9a77c"></span>tan</td><td class="mono">IN3</td><td>Motor B (OUT3/OUT4) direction</td></tr>
+          <tr><td class="mono">IO12</td><td><span class="wire" style="background:#e8d21d"></span>yellow</td><td class="mono">IN4</td><td>Motor B (OUT3/OUT4) direction</td></tr>
+          <tr><td>Battery +</td><td><span class="wire" style="background:#d62828"></span>red, via switch</td><td class="mono">12V</td><td>Motor power (3 × 18650 ≈ 11.1–12.6 V)</td></tr>
+          <tr><td>Battery −</td><td><span class="wire" style="background:#111"></span>black</td><td class="mono">GND</td><td>Battery ground</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout tip"><span class="tag">Quick test</span><div><p>The kit comes with its firmware already loaded. Insert the batteries, lift the robot, switch on and press <b>RST</b>: the motors briefly run. That tells you the motor wiring is alive.</p></div></div>
+    </div>
+  </article>
+
+  <h2>How the L298N makes a motor turn</h2>
+  <p class="prose">Each motor channel has two inputs. Make one input "on" and the other "off" and the motor spins one way; swap them and it spins the other way; both off and it stops. In this kit the <b>ENA/ENB jumpers stay on</b> (channels always enabled), and the code sends <b>PWM to the IN pins</b> to set the speed. So a "1" in the table below really means "PWM at the current speed".</p>
+
+  <div class="card stack">
+    <h3>Direction explorer</h3>
+    <p class="goal">Click a direction to see which pins are driven and how each side's wheels turn.</p>
+    <div class="explorer">
+      <div class="stack">
+        <div class="dir-btns" role="group" aria-label="Choose a direction">
+          <button data-dir="forward" aria-pressed="true">Forward</button>
+          <button data-dir="backward" aria-pressed="false">Backward</button>
+          <button data-dir="left" aria-pressed="false">Turn left</button>
+          <button data-dir="right" aria-pressed="false">Turn right</button>
+          <button data-dir="stop" aria-pressed="false">Stop</button>
+        </div>
+        <div class="tbl-wrap"><table id="dirTable">
+          <thead><tr><th>Move</th><th>IO13<br>IN3</th><th>IO12<br>IN4</th><th>IO14<br>IN1</th><th>IO15<br>IN2</th></tr></thead>
+          <tbody class="mono">
+            <tr data-row="forward"><td>Forward</td><td>0</td><td>speed</td><td>0</td><td>speed</td></tr>
+            <tr data-row="backward"><td>Backward</td><td>speed</td><td>0</td><td>speed</td><td>0</td></tr>
+            <tr data-row="left"><td>Turn left</td><td>speed</td><td>0</td><td>0</td><td>speed</td></tr>
+            <tr data-row="right"><td>Turn right</td><td>0</td><td>speed</td><td>speed</td><td>0</td></tr>
+            <tr data-row="stop"><td>Stop</td><td>0</td><td>0</td><td>0</td><td>0</td></tr>
+          </tbody>
+        </table></div>
+        <p class="goal" id="dirExplain"></p>
+      </div>
+      <svg class="robot-svg" viewBox="0 0 220 260" role="img" aria-label="Top view of the robot showing wheel directions">
+        <rect x="55" y="30" width="110" height="200" rx="16" stroke-width="3" style="fill:var(--accent-soft);stroke:var(--accent)"/>
+        <text x="110" y="22" text-anchor="middle" font-size="12" style="fill:var(--muted)">FRONT (camera)</text>
+        <rect x="20" y="45" width="30" height="62" rx="7" style="fill:var(--ink)"/>
+        <rect x="170" y="45" width="30" height="62" rx="7" style="fill:var(--ink)"/>
+        <rect x="20" y="153" width="30" height="62" rx="7" style="fill:var(--ink)"/>
+        <rect x="170" y="153" width="30" height="62" rx="7" style="fill:var(--ink)"/>
+        <text id="wl1" x="35" y="84" text-anchor="middle" font-size="20" style="fill:var(--mark)">▲</text>
+        <text id="wr1" x="185" y="84" text-anchor="middle" font-size="20" style="fill:var(--mark)">▲</text>
+        <text id="wl2" x="35" y="192" text-anchor="middle" font-size="20" style="fill:var(--mark)">▲</text>
+        <text id="wr2" x="185" y="192" text-anchor="middle" font-size="20" style="fill:var(--mark)">▲</text>
+        <text x="110" y="120" text-anchor="middle" font-size="12" style="fill:var(--muted)">LEFT side ←</text>
+        <text x="110" y="138" text-anchor="middle" font-size="12" style="fill:var(--muted)">→ RIGHT side</text>
+        <text id="robotMove" x="110" y="252" text-anchor="middle" font-size="15" style="fill:var(--ink)">FORWARD</text>
+      </svg>
+    </div>
+  </div>
+
+  <article class="lab" data-lab="L6" data-mod="motors">
+    <div class="lab-head"><span class="labno">LAB 6</span><h3>Motor test</h3><span class="time">≈ 15 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> check that every motor turns the right way. This replaces the kit firmware; you can re-upload it later from Module 4.</p>
+      <ol class="steps">
+        <li><div><p><b>Put the robot on a box or cup so the wheels hang in the air.</b></p></div></li>
+        <li><div><p>Upload the sketch. Switch the battery on. After 2 seconds it runs forward, backward, left, right, once.</p></div></li>
+        <li><div><p>Watch each wheel. Press <b>RST</b> to repeat.</p></div></li>
+      </ol>
+      <div class="code" data-snippet="L6"></div>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>What you see</th><th>Fix</th></tr></thead>
+        <tbody>
+          <tr><td>One wheel turns backwards on "Forward"</td><td>Swap that motor's two wires in its OUT terminal.</td></tr>
+          <tr><td>A whole side turns backwards</td><td>Swap the two wires of that side's OUT terminal (or swap IN1↔IN2 / IN3↔IN4).</td></tr>
+          <tr><td>"Left" turns right</td><td>Swap the pin numbers of <code>LEFT_*</code> and <code>RIGHT_*</code> in the code.</td></tr>
+          <tr><td>Motors only buzz</td><td>Raise <code>speed</code> (try 200) or charge the batteries.</td></tr>
+          <tr><td>Nothing moves</td><td>Battery switch on? Shared GND wire connected? Batteries above 11.1 V?</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout tip"><span class="tag">Read the code</span><div><p><code>setMotors(l0, l1, r0, r1)</code> writes one PWM value to each of the four L298N inputs. Every movement is just a different pattern of those four numbers, exactly like the table above.</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L7" data-mod="motors">
+    <div class="lab-head"><span class="labno">LAB 7</span><h3>Drive from your PC keyboard (USB)</h3><span class="time">≈ 15 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> your first "remote control", through the USB cable. The PC sends letters, the ESP32 turns them into movements.</p>
+      <div class="code" data-snippet="L7"></div>
+      <ol class="steps">
+        <li><div><p>Upload, open the Serial Monitor at <b>115200</b>, robot still on its box.</p></div></li>
+        <li><div><p>Type <kbd>w</kbd> and press <kbd>Enter</kbd>. The wheels spin forward until you send <kbd>x</kbd>.</p></div></li>
+      </ol>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Add a <kbd>b</kbd> key that blinks the flash LED, or a <kbd>q</kbd> key that spins on the spot for exactly one second.</p></div></div>
+    </div>
+  </article>
+</div>
+<div class="pager"><a href="#esp32"><small>Back</small><b>← 2 · ESP32-CAM basics</b></a><a class="next" href="#remote"><small>Next</small><b>4 · Phone &amp; PC control →</b></a></div>
+</section>
+
+<!-- ======================================================= 4 REMOTE -->
+<section class="module" id="m-remote" data-route="remote">
+<div class="stack">
+  <div class="eyebrow">Module 4</div>
+  <h1>Control from your phone or PC</h1>
+  <p class="lede">Now we cut the cable. The robot runs a small web server, and any phone or laptop browser becomes the remote. First with the kit's own firmware (with live camera), then with code you write yourself.</p>
+
+  <article class="lab" data-lab="kit-fw" data-mod="remote">
+    <div class="lab-head"><span class="labno">PART A</span><h3>Drive with the kit firmware</h3><span class="time">≈ 15 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> use the factory program: camera stream plus drive buttons. If you uploaded Labs 1–7, re-upload the kit code first (Part B).</p>
+      <div class="grid2">
+        <ol class="steps">
+          <li><div><p>Turn on the power switch. The small <b>red LED</b> on the ESP32-CAM lights up when its WiFi is ready. If not, press <b>RST</b>.</p></div></li>
+          <li><div><p>On your phone open WiFi settings and join <b>ESP32-CAM Robot</b> (no password).</p></div></li>
+          <li><div><p>Open a browser and go to <b>192.168.4.1</b>.</p></div></li>
+          <li><div><p>Hold a green button to drive; release to stop. Yellow buttons switch the flash LED.</p></div></li>
+        </ol>
+        <figure class="figure"><img src="assets/phone-controller.jpg" alt="Phone browser at 192.168.4.1 showing camera image, Forward, Left, Stop, Right, Backward and Light buttons" loading="lazy"><figcaption>The kit's remote page.</figcaption></figure>
+      </div>
+      <div class="callout warn"><span class="tag">Page won't load?</span><div><ul class="plain">
+        <li>Turn <b>mobile data off</b>. Phones often send traffic over 4G/5G when the WiFi "has no internet".</li>
+        <li>Check you joined the right robot's WiFi.</li>
+        <li>Low batteries cause random resets. The total should be above 11.1 V.</li>
+      </ul></div></div>
+      <h4>Every button is just a URL</h4>
+      <p class="prose">The remote page simply opens these addresses in the background. Try typing them into a PC browser that's connected to the robot's WiFi:</p>
+      <div class="code short" data-snippet="kit_urls"></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="kit-upload" data-mod="remote">
+    <div class="lab-head"><span class="labno">PART B</span><h3>Re-upload the kit firmware (and rename its WiFi)</h3><span class="time">≈ 15 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> put the camera robot program back on the board, with a WiFi name that's unique to your team, so twenty robots called "ESP32-CAM Robot" don't confuse everyone.</p>
+      <div class="dl-item"><div><b>Kit main code</b><small>ESP32_Camera_4WD_Robot_Car_OV3660_V3: .ino + app_httpd.cpp + camera_index.h</small></div><button class="btn btn-primary" data-dl="kitzip">Download .zip</button></div>
+      <ol class="steps">
+        <li><div><p>Unzip it. Keep all three files in the folder <b>ESP32_Camera_4WD_Robot_Car_OV3660_V3</b>.</p></div></li>
+        <li><div><p>Open the <b>.ino</b> file. All three files appear as tabs.</p></div></li>
+        <li><div><p>Change line 9 so the hotspot carries your team name:</p><div class="code short" data-snippet="kit_ssid"></div></div></li>
+        <li><div><p>Board <b>AI Thinker ESP32-CAM</b>, your Port, <b>Upload</b>. Then repeat Part A with your new WiFi name.</p></div></li>
+      </ol>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L8" data-mod="remote">
+    <div class="lab-head"><span class="labno">LAB 8</span><h3>Build your own web remote</h3><span class="time">≈ 30 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> write the web server yourself: hold-to-drive buttons for phones, <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> keys for PCs, a speed slider, and a safety stop.</p>
+      <div class="code" data-snippet="L8"></div>
+      <ol class="steps">
+        <li><div><p>Upload. The Serial Monitor shows <b>Hotspot: Robot-<span data-var="TEAM">team01</span></b>.</p></div></li>
+        <li><div><p>Join that WiFi (password <code>robot1234</code>) and open <b>192.168.4.1</b>.</p></div></li>
+        <li><div><p>Phone: hold the arrows. PC: hold <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrow keys.</p></div></li>
+      </ol>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Address</th><th>What the ESP32 does</th></tr></thead>
+        <tbody>
+          <tr><td class="mono">/</td><td>Sends the remote page (HTML stored in <code>PAGE</code>)</td></tr>
+          <tr><td class="mono">/cmd?c=forward</td><td>Drives. While you hold a button, the page repeats this every 200 ms</td></tr>
+          <tr><td class="mono">/speed?v=200</td><td>Sets PWM speed 0–255</td></tr>
+          <tr><td class="mono">/light?on=1</td><td>Flash LED on (0 = off)</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout check"><span class="tag">Why the failsafe?</span><div><p>If your phone locks or walks out of range, the "stop" message may never arrive. The robot stops itself when it hears nothing for 0.6 s. Real robots always have a failsafe like this.</p></div></div>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Add a "Spin" button that sends <code>/cmd?c=left</code>, or change the button colours in the <code>&lt;style&gt;</code> part of <code>PAGE</code>.</p></div></div>
+    </div>
+  </article>
+</div>
+<div class="pager"><a href="#motors"><small>Back</small><b>← 3 · Motors &amp; wiring</b></a><a class="next" href="#mqtt"><small>Next</small><b>5 · MQTT →</b></a></div>
+</section>
+
+<!-- ======================================================= 5 MQTT -->
+<section class="module" id="m-mqtt" data-route="mqtt">
+<div class="stack">
+  <div class="eyebrow">Module 5</div>
+  <h1>MQTT: talk to robots through a broker</h1>
+  <p class="lede">With a web remote, your phone talks straight to one robot. With MQTT, everything talks to a central <b>broker</b>, and the broker passes messages on. One dashboard can drive many robots, and many screens can watch one robot.</p>
+
+  <div class="card">
+    <svg class="mqtt-svg" viewBox="0 0 860 250" role="img" aria-label="MQTT diagram: Node-RED dashboard publishes to the cmd topic on the broker, the robot subscribes; the robot publishes status, Node-RED subscribes">
+      <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--accent)"/></marker>
+      <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" style="fill:var(--mark)"/></marker></defs>
+      <rect x="10" y="60" width="200" height="120" rx="12" stroke-width="2" style="fill:var(--panel);stroke:var(--line)"/>
+      <text x="110" y="105" text-anchor="middle" font-weight="700" font-size="17" style="fill:var(--ink)">Node-RED</text>
+      <text x="110" y="128" text-anchor="middle" font-size="13" style="fill:var(--muted)">your laptop · dashboard</text>
+      <rect x="330" y="50" width="200" height="140" rx="12" style="fill:var(--ink)"/>
+      <text x="430" y="108" text-anchor="middle" font-weight="700" font-size="17" style="fill:var(--paper)">Broker</text>
+      <text x="430" y="131" text-anchor="middle" font-size="13" opacity=".75" style="fill:var(--paper)">Mosquitto · port 1883</text>
+      <rect x="650" y="60" width="200" height="120" rx="12" stroke-width="2" style="fill:var(--panel);stroke:var(--line)"/>
+      <text x="750" y="105" text-anchor="middle" font-weight="700" font-size="17" style="fill:var(--ink)">Robot</text>
+      <text x="750" y="128" text-anchor="middle" font-size="13" style="fill:var(--muted)">ESP32-CAM · PubSubClient</text>
+      <line x1="212" y1="92" x2="326" y2="92" stroke-width="3" marker-end="url(#ar)" style="stroke:var(--accent)"/>
+      <line x1="532" y1="92" x2="646" y2="92" stroke-width="3" marker-end="url(#ar)" style="stroke:var(--accent)"/>
+      <text x="430" y="30" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--accent)">…/cmd   "forward:800"</text>
+      <line x1="646" y1="152" x2="534" y2="152" stroke-width="3" marker-end="url(#ar2)" style="stroke:var(--mark)"/>
+      <line x1="326" y1="152" x2="214" y2="152" stroke-width="3" marker-end="url(#ar2)" style="stroke:var(--mark)"/>
+      <text x="430" y="225" text-anchor="middle" font-size="13" font-weight="600" style="fill:var(--muted)">…/status   {"state":"forward","speed":170,…}</text>
+      <text x="269" y="84" text-anchor="middle" font-size="12" style="fill:var(--muted)">publish</text>
+      <text x="589" y="84" text-anchor="middle" font-size="12" style="fill:var(--muted)">deliver</text>
+      <text x="589" y="172" text-anchor="middle" font-size="12" style="fill:var(--muted)">publish</text>
+      <text x="269" y="172" text-anchor="middle" font-size="12" style="fill:var(--muted)">deliver</text>
+    </svg>
+  </div>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Word</th><th>Meaning</th><th>In our robot</th></tr></thead>
+    <tbody>
+      <tr><td><b>Broker</b></td><td>The post office. Receives every message and forwards it.</td><td>Mosquitto on the instructor's PC</td></tr>
+      <tr><td><b>Topic</b></td><td>The address on the envelope, like a folder path</td><td class="mono">imakewemake/robot/<span data-var="TEAM">team01</span>/cmd</td></tr>
+      <tr><td><b>Publish</b></td><td>Send a message to a topic</td><td>Node-RED publishes <code>forward:800</code></td></tr>
+      <tr><td><b>Subscribe</b></td><td>Ask the broker for every message on a topic</td><td>The robot subscribes to its <code>/cmd</code> topic</td></tr>
+      <tr><td><b>Retained</b></td><td>The broker keeps the last message for newcomers</td><td><code>/online</code> stays "online" or "offline"</td></tr>
+      <tr><td><b>Last Will</b></td><td>A message the broker sends if a client vanishes</td><td>Robot loses power → broker publishes "offline"</td></tr>
+      <tr><td><b>Wildcards</b></td><td><code>+</code> = one level, <code>#</code> = everything below</td><td class="mono">imakewemake/robot/+/online</td></tr>
+    </tbody>
+  </table></div>
+
+  <details class="more" data-lab="broker" data-mod="mqtt">
+    <summary>Instructor: set up the classroom broker (Mosquitto on Windows) · once per class</summary>
+    <div>
+      <ol class="steps">
+        <li><div><p>Download and install Mosquitto from <a href="https://mosquitto.org/download/" target="_blank" rel="noopener">mosquitto.org/download</a> (the Windows 64-bit installer). Mac: <code>brew install mosquitto</code>.</p></div></li>
+        <li><div><p>Open <code>C:\Program Files\mosquitto\mosquitto.conf</code> in Notepad (as Administrator), and add these lines at the end. Without them, Mosquitto 2 only accepts connections from the same PC.</p><div class="code short" data-snippet="mosq_conf"></div></div></li>
+        <li><div><p>Allow port 1883 through the Windows firewall:</p><div class="code short" data-snippet="mosq_fw"></div></div></li>
+        <li><div><p>If the Mosquitto Windows service is already running, stop it in <b>Services</b>, then start the broker so you can see every connection:</p><div class="code short" data-snippet="mosq_run"></div></div></li>
+        <li><div><p>Find this PC's IP address with <code>ipconfig</code> (IPv4 Address, e.g. 192.168.1.100) and write it on the board. That's the <b>broker IP</b> students type into their settings.</p></div></li>
+        <li><div><p>Watch robots join:</p><div class="code short" data-snippet="mosq_class"></div></div></li>
+      </ol>
+      <div class="callout warn"><span class="tag">Network</span><div><p>Robots, student laptops and the broker PC must be on the same 2.4 GHz-capable WiFi, and the network must allow devices to talk to each other. Guest networks with "client isolation" block this. A cheap dedicated router works best.</p></div></div>
+    </div>
+  </details>
+
+  <article class="lab" data-lab="explorer" data-mod="mqtt">
+    <div class="lab-head"><span class="labno">WARM-UP</span><h3>Publish and subscribe with MQTT Explorer</h3><span class="time">≈ 10 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> see MQTT messages with your own eyes before the robot joins in.</p>
+      <ol class="steps">
+        <li><div><p>Install <b>MQTT Explorer</b> from <a href="https://mqtt-explorer.com" target="_blank" rel="noopener">mqtt-explorer.com</a>.</p></div></li>
+        <li><div><p>New connection → Host <b><span data-var="BROKER">192.168.1.100</span></b>, Port <b>1883</b>, no username → <b>Connect</b>.</p></div></li>
+        <li><div><p>In the <b>Publish</b> panel, topic <code>imakewemake/robot/<span data-var="TEAM">team01</span>/cmd</code>, message <code>hello</code>, click <b>Publish</b>. It appears in the topic tree on the left.</p></div></li>
+        <li><div><p>Look at what other teams are publishing. That's the "many screens, one broker" idea.</p></div></li>
+      </ol>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="L9" data-mod="mqtt">
+    <div class="lab-head"><span class="labno">LAB 9</span><h3>Turn the robot into an MQTT robot</h3><span class="time">≈ 30 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> the robot joins the classroom WiFi, connects to the broker, obeys commands on its <code>/cmd</code> topic and reports its status.</p>
+      <ol class="steps">
+        <li><div><p>Install the library: <b>Sketch › Include Library › Manage Libraries…</b>, search <b>PubSubClient</b>, install the one by <b>Nick O'Leary</b>.</p></div></li>
+        <li><div><p>Check your team settings at the top of the code (they come from the settings on the Start page).</p></div></li>
+        <li><div><p>Upload, open the Serial Monitor. You should see <b>WiFi OK</b> then <b>MQTT OK, listening on …/cmd</b>. The red LED on the board turns on when it's connected to the broker.</p></div></li>
+      </ol>
+      <div class="code" data-snippet="L9"></div>
+      <div class="grid2">
+        <div class="code short" data-snippet="topics"></div>
+        <div class="code short" data-snippet="commands"></div>
+      </div>
+      <h4>Test it</h4>
+      <p class="prose">In MQTT Explorer, publish <code>forward:1000</code> to your <code>/cmd</code> topic. The robot drives for one second. Open the <code>/status</code> topic to see its JSON report. Command-line fans can use:</p>
+      <div class="code short" data-snippet="mosq_test"></div>
+      <div class="callout check"><span class="tag">Safety built in</span><div><ul class="plain">
+        <li>Plain <code>forward</code> stops by itself after 3 s (<code>MAX_MOVE_MS</code>).</li>
+        <li>If WiFi or the broker connection drops, the robot stops immediately.</li>
+      </ul></div></div>
+      <div class="callout warn"><span class="tag">rc = −2 ?</span><div><p>The robot can't reach the broker. Check the broker IP, that the broker PC's firewall allows port 1883, and that the robot and broker are on the same network.</p></div></div>
+    </div>
+  </article>
+</div>
+<div class="pager"><a href="#remote"><small>Back</small><b>← 4 · Phone &amp; PC control</b></a><a class="next" href="#nodered"><small>Next</small><b>6 · Node-RED control →</b></a></div>
+</section>
+
+<!-- ======================================================= 6 NODE-RED -->
+<section class="module" id="m-nodered" data-route="nodered">
+<div class="stack">
+  <div class="eyebrow">Module 6</div>
+  <h1>Node-RED: flows and a robot dashboard</h1>
+  <p class="lede">Node-RED lets you program by wiring boxes ("nodes") together in a browser. It speaks MQTT out of the box, and with Dashboard 2.0 it can build a control panel that works on any phone or PC.</p>
+
+  <article class="lab" data-lab="nr-install" data-mod="nodered">
+    <div class="lab-head"><span class="labno">SETUP</span><h3>Install and start Node-RED</h3><span class="time">≈ 15 min</span></div>
+    <div class="lab-body">
+      <ol class="steps">
+        <li><div><p>Install <b>Node.js LTS</b> from <a href="https://nodejs.org" target="_blank" rel="noopener">nodejs.org</a> (accept the defaults).</p></div></li>
+        <li><div><p>Open Command Prompt (Windows) or Terminal (Mac/Linux) and run these one at a time. The first line should print a version like <code>v22.x</code>. On Mac/Linux you may need <code>sudo</code> before <code>npm</code>.</p><div class="code short" data-snippet="nr_install"></div></div></li>
+        <li><div><p>Leave that window open. Open <a href="http://127.0.0.1:1880" target="_blank" rel="noopener">http://127.0.0.1:1880</a> in your browser: that's the Node-RED editor.</p></div></li>
+        <li><div><p>Install the dashboard: menu <b>☰ › Manage palette › Install</b>, search for this and click <b>install</b>:</p><div class="code short" data-snippet="nr_palette"></div></div></li>
+      </ol>
+      <div class="callout tip"><span class="tag">Import a flow</span><div><p>For each lab below: click <b>Copy</b>, then in Node-RED open <b>☰ › Import</b>, paste with <kbd>Ctrl</kbd>+<kbd>V</kbd>, click <b>Import</b>, then the red <b>Deploy</b> button (top right). Or use <b>Download</b> and choose <b>select a file to import</b>.</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="F1" data-mod="nodered">
+    <div class="lab-head"><span class="labno">LAB 10</span><h3>Drive with inject buttons</h3><span class="time">≈ 20 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> send commands with one click and watch the robot's status come back. Your team ID and broker IP are already filled in.</p>
+      <div class="code" data-snippet="F1"></div>
+      <ol class="steps">
+        <li><div><p>Import and <b>Deploy</b>. Under each MQTT node a small green <b>connected</b> label should appear.</p></div></li>
+        <li><div><p>Click the square button on the left of <b>Forward 1 s</b>. The robot drives for a second.</p></div></li>
+        <li><div><p>Open the <b>Debug</b> sidebar (bug icon, top right) to see the status messages arriving every 2 seconds.</p></div></li>
+        <li><div><p>Click <b>Dance!</b>. The <b>Square dance</b> function sends eight timed moves in a row.</p></div></li>
+      </ol>
+      <div class="tbl-wrap"><table>
+        <thead><tr><th>Node</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td><b>inject</b></td><td>A button inside the editor. Sends a fixed message, e.g. <code>forward:1000</code></td></tr>
+          <tr><td><b>mqtt out</b></td><td>Publishes whatever arrives to your robot's <code>/cmd</code> topic</td></tr>
+          <tr><td><b>mqtt in</b></td><td>Subscribes to <code>/status</code> and <code>/online</code></td></tr>
+          <tr><td><b>function</b></td><td>A little JavaScript. Here: a timed list of moves</td></tr>
+          <tr><td><b>debug</b></td><td>Prints messages in the Debug sidebar</td></tr>
+        </tbody>
+      </table></div>
+      <div class="callout tip"><span class="tag">Try this</span><div><p>Open the <b>Square dance</b> node and design your own routine: a zig-zag, a figure eight, a "parking" move. Change the numbers, Deploy, click Dance!</p></div></div>
+    </div>
+  </article>
+
+  <article class="lab" data-lab="F2" data-mod="nodered">
+    <div class="lab-head"><span class="labno">LAB 11</span><h3>Build a robot control dashboard</h3><span class="time">≈ 25 min</span></div>
+    <div class="lab-body">
+      <p class="goal"><b>Goal:</b> a real control panel with drive buttons, speed and step-time sliders, a light switch and live status, usable from any phone on the classroom WiFi.</p>
+      <div class="code" data-snippet="F2"></div>
+      <ol class="steps">
+        <li><div><p>Make sure <b>@flowfuse/node-red-dashboard</b> is installed (Setup step 4), then import and <b>Deploy</b>.</p></div></li>
+        <li><div><p>Open <a href="http://127.0.0.1:1880/dashboard" target="_blank" rel="noopener">http://127.0.0.1:1880/dashboard</a>.</p></div></li>
+        <li><div><p>Each tap of an arrow moves the robot for the <b>Step time</b> set on the slider. <b>STOP</b> stops at once.</p></div></li>
+        <li><div><p>On your phone (same WiFi), open <code>http://&lt;your-laptop-IP&gt;:1880/dashboard</code>. Find your laptop IP with <code>ipconfig</code>.</p></div></li>
+      </ol>
+      <div class="callout check"><span class="tag">How it works</span><div><p>An arrow button sends <code>forward</code> → the <b>add step time</b> function turns it into <code>forward:600</code> using the slider value it remembered in <code>flow.stepMs</code> → <b>mqtt out</b> publishes it. The robot's status JSON comes back through <b>mqtt in</b> → <b>split status</b> → four text widgets.</p></div></div>
+      <div class="callout tip"><span class="tag">Challenges</span><div><ul class="plain">
+        <li>Add a <b>gauge</b> widget that shows WiFi signal strength from <code>msg.payload.rssi</code>.</li>
+        <li>Add buttons for a second team's robot: copy the <b>mqtt out</b> node and change the topic.</li>
+        <li>Make the robot drive a square when its <code>/online</code> topic changes to "online".</li>
+        <li>Instructor challenge: one dashboard that sends the same dance to every robot in the room.</li>
+      </ul></div></div>
+    </div>
+  </article>
+
+  <div class="card stack">
+    <h3>You made it</h3>
+    <p class="prose">You've gone from blinking an LED to driving a robot through a broker from a dashboard. The same pattern (sensor or actuator → ESP32 → MQTT → Node-RED) runs smart greenhouses, factory monitors and home automation. Swap the motors for a sensor and you have an IoT device.</p>
+  </div>
+</div>
+<div class="pager"><a href="#mqtt"><small>Back</small><b>← 5 · MQTT</b></a><a class="next" href="#reference"><small>Next</small><b>Cheat sheet &amp; files →</b></a></div>
+</section>
+
+<!-- ======================================================= REFERENCE -->
+<section class="module" id="m-reference" data-route="reference">
+<div class="stack">
+  <div class="eyebrow">Reference</div>
+  <h1>Cheat sheet &amp; files</h1>
+
+  <h2>Files</h2>
+  <div class="stack">
+    <div class="dl-item"><div><b>Kit main code</b><small>Factory camera + remote firmware (3 source files)</small></div><button class="btn btn-primary" data-dl="kitzip">Download .zip</button></div>
+    <div class="dl-item"><div><b>All lab sketches</b><small>Labs 1–9, personalized with your team settings, one folder each</small></div><button class="btn btn-primary" data-dl="allzip">Download .zip</button></div>
+    <div class="dl-item"><div><b>Node-RED flows</b><small>Lab 10 basics + Lab 11 dashboard (.json)</small></div><span class="dl-row"><button class="btn btn-outline" data-dl-snippet="F1">Basics flow</button><button class="btn btn-outline" data-dl-snippet="F2">Dashboard flow</button></span></div>
+    <div class="dl-item"><div><b>This course as a PDF</b><small>Every module and this cheat sheet, with your team's code filled in</small></div><button class="btn btn-primary" data-pdf="all">Save PDF</button></div>
+    <div class="dl-item" id="manualItem"><div><b>Kit user manual</b><small>Assembly, wiring, upload steps, L298N and ESP32-CAM specs (PDF, 38 pages)</small></div><span class="dl-row" id="manualLinks"><span class="goal">Ask your instructor for the PDF.</span></span></div>
+  </div>
+
+  <h2>Pins</h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>GPIO</th><th>Connected to</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">14</td><td>L298N IN1</td><td>Right motors (code: RIGHT_M0)</td></tr>
+      <tr><td class="mono">15</td><td>L298N IN2</td><td>Right motors (code: RIGHT_M1)</td></tr>
+      <tr><td class="mono">13</td><td>L298N IN3</td><td>Left motors (code: LEFT_M0)</td></tr>
+      <tr><td class="mono">12</td><td>L298N IN4</td><td>Left motors (code: LEFT_M1). Boot-sensitive pin; if the board won't boot, unplug this wire while uploading</td></tr>
+      <tr><td class="mono">4</td><td>White flash LED</td><td>PWM brightness, keep low</td></tr>
+      <tr><td class="mono">33</td><td>Red status LED</td><td>Active LOW</td></tr>
+      <tr><td class="mono">0</td><td>Boot button / camera clock</td><td>Hold during reset for upload mode</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>MQTT</h2>
+  <div class="grid2">
+    <div class="code short" data-snippet="topics"></div>
+    <div class="code short" data-snippet="commands"></div>
+  </div>
+
+  <h2>Arduino code you'll use again and again</h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Code</th><th>Meaning</th></tr></thead>
+    <tbody class="mono">
+      <tr><td>pinMode(33, OUTPUT);</td><td style="font-family:var(--body)">Make pin 33 an output</td></tr>
+      <tr><td>digitalWrite(33, LOW);</td><td style="font-family:var(--body)">Set the pin to 0 V (turns the red LED on)</td></tr>
+      <tr><td>ledcAttachChannel(pin, 2000, 8, 4);</td><td style="font-family:var(--body)">PWM on <i>pin</i>: 2000 Hz, 8-bit (0–255), channel 4</td></tr>
+      <tr><td>ledcWrite(pin, 170);</td><td style="font-family:var(--body)">Set PWM duty (speed or brightness)</td></tr>
+      <tr><td>Serial.println("hi");</td><td style="font-family:var(--body)">Print to the Serial Monitor</td></tr>
+      <tr><td>WiFi.softAP(name, pass);</td><td style="font-family:var(--body)">Make a hotspot (robot is 192.168.4.1)</td></tr>
+      <tr><td>WiFi.begin(name, pass);</td><td style="font-family:var(--body)">Join an existing WiFi network</td></tr>
+      <tr><td>mqtt.publish(topic, text);</td><td style="font-family:var(--body)">Send an MQTT message</td></tr>
+      <tr><td>mqtt.subscribe(topic);</td><td style="font-family:var(--body)">Receive messages on a topic</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Troubleshooting</h2>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>Problem</th><th>Most likely fix</th></tr></thead>
+    <tbody>
+      <tr><td>No COM port</td><td>Data USB cable, CH340 driver, different USB socket</td></tr>
+      <tr><td>"Failed to connect" when uploading</td><td>Hold IO0, tap RST, release IO0, upload again</td></tr>
+      <tr><td>Board keeps restarting (brownout)</td><td>Turn the battery on, charge the batteries</td></tr>
+      <tr><td>Robot doesn't move</td><td>Battery switch, shared GND, batteries above 11.1 V, speed above ~120</td></tr>
+      <tr><td>Wheel goes the wrong way</td><td>Swap that motor's two wires</td></tr>
+      <tr><td>192.168.4.1 won't open</td><td>Phone mobile data off, right robot WiFi, press RST</td></tr>
+      <tr><td>Stuck on "WiFi connecting…"</td><td>Name/password exact? 2.4 GHz network?</td></tr>
+      <tr><td>MQTT rc=−2</td><td>Wrong broker IP, firewall port 1883, different network</td></tr>
+      <tr><td>Node-RED MQTT says "disconnected"</td><td>Edit the broker node, check the IP, Deploy again</td></tr>
+      <tr><td>Dashboard nodes show as "unknown"</td><td>Install @flowfuse/node-red-dashboard, then restart Node-RED</td></tr>
+    </tbody>
+  </table></div>
+</div>
+<div class="pager"><a href="#nodered"><small>Back</small><b>← 6 · Node-RED control</b></a><a class="next" href="#start"><small>Back to</small><b>Start →</b></a></div>
+</section>
+
+</main>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="pdf-overlay" id="pdfOverlay" hidden><div><b>Making your PDF…</b><span id="pdfStatus">Loading tools</span><div class="bar"><i id="pdfBar"></i></div></div></div>
+
+<script id="snippets" type="application/json">{"L1": {"title": "Lab 1 - Hello ESP32-CAM", "file": "L1_hello_esp32.ino", "lang": "cpp", "code": "// Lab 1 - Hello ESP32-CAM\n// Prints information about your board to the Serial Monitor once per second.\n// Open Tools > Serial Monitor and set the speed to 115200 baud.\n\n#include <WiFi.h>\n\nvoid setup() {\n  Serial.begin(115200);   // start the USB serial connection\n  delay(1000);            // give the Serial Monitor a moment to connect\n  Serial.println();\n  Serial.println(\"Hello from my ESP32-CAM!\");\n}\n\nvoid loop() {\n  Serial.println(\"------------------------------\");\n  Serial.print(\"Chip model : \"); Serial.println(ESP.getChipModel());\n  Serial.print(\"CPU speed  : \"); Serial.print(ESP.getCpuFreqMHz()); Serial.println(\" MHz\");\n  Serial.print(\"PSRAM size : \"); Serial.print(ESP.getPsramSize() / 1024); Serial.println(\" KB\");\n  Serial.print(\"MAC address: \"); Serial.println(WiFi.macAddress());\n  Serial.print(\"Uptime     : \"); Serial.print(millis() / 1000); Serial.println(\" s\");\n  delay(1000);\n}\n", "download": "sketch"}, "L2": {"title": "Lab 2 - Blink the red LED", "file": "L2_blink_red_led.ino", "lang": "cpp", "code": "// Lab 2 - Blink the small red LED\n// The ESP32-CAM has a tiny red LED on GPIO 33 (on the back, near the antenna).\n// It is \"active LOW\": writing LOW turns it ON, writing HIGH turns it OFF.\n\nconst int RED_LED = 33;\n\nvoid setup() {\n  pinMode(RED_LED, OUTPUT);\n}\n\nvoid loop() {\n  digitalWrite(RED_LED, LOW);   // LED ON\n  delay(500);                   // wait half a second\n  digitalWrite(RED_LED, HIGH);  // LED OFF\n  delay(500);\n}\n", "download": "sketch"}, "L3": {"title": "Lab 3 - Fade the flash LED", "file": "L3_flash_led_pwm.ino", "lang": "cpp", "code": "// Lab 3 - Fade the white flash LED with PWM\n// The big white flash LED is on GPIO 4. It is VERY bright - do not stare at it.\n// PWM (Pulse Width Modulation) switches the LED on/off very fast.\n// The \"duty\" value (0-255) sets how much of the time it is ON = brightness.\n\nconst int FLASH_LED = 4;\nconst int MAX_BRIGHTNESS = 40;   // keep it low (max is 255)\n\nvoid setup() {\n  // ESP32 Arduino core 3.x: attach a pin to PWM with (pin, frequency Hz, resolution bits)\n  ledcAttach(FLASH_LED, 5000, 8);\n}\n\nvoid loop() {\n  for (int duty = 0; duty <= MAX_BRIGHTNESS; duty++) {   // fade in\n    ledcWrite(FLASH_LED, duty);\n    delay(20);\n  }\n  for (int duty = MAX_BRIGHTNESS; duty >= 0; duty--) {   // fade out\n    ledcWrite(FLASH_LED, duty);\n    delay(20);\n  }\n  delay(500);\n}\n", "download": "sketch"}, "L4": {"title": "Lab 4 - WiFi scanner", "file": "L4_wifi_scan.ino", "lang": "cpp", "code": "// Lab 4 - Scan for WiFi networks\n// Shows every WiFi network the ESP32 can hear, with its signal strength (RSSI).\n// RSSI is in dBm: -40 is excellent, -70 is OK, -85 is weak.\n\n#include <WiFi.h>\n\nvoid setup() {\n  Serial.begin(115200);\n  WiFi.mode(WIFI_STA);   // \"station\" mode = behave like a phone/laptop\n  WiFi.disconnect();\n  delay(100);\n}\n\nvoid loop() {\n  Serial.println(\"Scanning...\");\n  int count = WiFi.scanNetworks();\n  if (count == 0) {\n    Serial.println(\"No networks found\");\n  } else {\n    for (int i = 0; i < count; i++) {\n      Serial.printf(\"%2d) %-28s  %4d dBm  ch %2d  %s\\n\",\n                    i + 1,\n                    WiFi.SSID(i).c_str(),\n                    WiFi.RSSI(i),\n                    WiFi.channel(i),\n                    WiFi.encryptionType(i) == WIFI_AUTH_OPEN ? \"open\" : \"locked\");\n    }\n  }\n  Serial.println();\n  WiFi.scanDelete();\n  delay(5000);\n}\n", "download": "sketch"}, "L6": {"title": "Lab 6 - Motor test", "file": "L6_motor_test.ino", "lang": "cpp", "code": "// Lab 6 - Motor test\n// Runs the robot through: forward, backward, left, right, stop - ONE time.\n// Put the robot on a box so the wheels spin in the air!\n// Press the RST button on the ESP32-CAM to run the test again.\n//\n// Wiring (from the kit manual):\n//   ESP32-CAM IO14 -> L298N IN1  \\  right-side motors (OUT1/OUT2)\n//   ESP32-CAM IO15 -> L298N IN2  /\n//   ESP32-CAM IO13 -> L298N IN3  \\  left-side motors (OUT3/OUT4)\n//   ESP32-CAM IO12 -> L298N IN4  /\n//   Keep the ENA and ENB jumper caps ON.\n\n// ---------- Motor pins (same names as the kit's main code) ----------\nconst int LEFT_M0  = 13;   // IN3\nconst int LEFT_M1  = 12;   // IN4\nconst int RIGHT_M0 = 14;   // IN1\nconst int RIGHT_M1 = 15;   // IN2\n\nconst int PWM_FREQ = 2000; // 2 kHz PWM\nconst int PWM_RES  = 8;    // 8-bit: duty goes 0..255\nint speed = 160;           // 0..255  (below ~100 the motors may only buzz)\n\n// We use PWM channels 4-7 so we never clash with the camera (it uses channel 0).\nvoid motorsBegin() {\n  ledcAttachChannel(LEFT_M0,  PWM_FREQ, PWM_RES, 4);\n  ledcAttachChannel(LEFT_M1,  PWM_FREQ, PWM_RES, 5);\n  ledcAttachChannel(RIGHT_M0, PWM_FREQ, PWM_RES, 6);\n  ledcAttachChannel(RIGHT_M1, PWM_FREQ, PWM_RES, 7);\n}\n\n// Set all four L298N inputs at once\nvoid setMotors(int l0, int l1, int r0, int r1) {\n  ledcWrite(LEFT_M0, l0);\n  ledcWrite(LEFT_M1, l1);\n  ledcWrite(RIGHT_M0, r0);\n  ledcWrite(RIGHT_M1, r1);\n}\n\nvoid forward()   { setMotors(0, speed, 0, speed); }   // both sides forward\nvoid backward()  { setMotors(speed, 0, speed, 0); }   // both sides backward\nvoid turnLeft()  { setMotors(speed, 0, 0, speed); }   // left back, right forward\nvoid turnRight() { setMotors(0, speed, speed, 0); }   // left forward, right back\nvoid stopMotors(){ setMotors(0, 0, 0, 0); }\n\nvoid step(const char* name, void (*move)(), int ms) {\n  Serial.println(name);\n  move();\n  delay(ms);\n  stopMotors();\n  delay(500);\n}\n\nvoid setup() {\n  Serial.begin(115200);\n  motorsBegin();\n  stopMotors();\n  delay(2000);                       // 2 s to put the robot down safely\n\n  step(\"Forward\",  forward,   1000);\n  step(\"Backward\", backward,  1000);\n  step(\"Left\",     turnLeft,  700);\n  step(\"Right\",    turnRight, 700);\n  Serial.println(\"Done! Press RST to run again.\");\n}\n\nvoid loop() {\n  // nothing here - the test runs once in setup()\n}\n", "download": "sketch"}, "L7": {"title": "Lab 7 - Keyboard drive over USB", "file": "L7_serial_drive.ino", "lang": "cpp", "code": "// Lab 7 - Drive the robot from your PC keyboard (USB Serial)\n// Open Tools > Serial Monitor (115200 baud), type a letter and press Enter:\n//   w = forward   s = backward   a = left   d = right   x = stop\n//   + = faster    - = slower\n// Keep the robot on a box while the USB cable is plugged in!\n\nconst int LEFT_M0 = 13, LEFT_M1 = 12, RIGHT_M0 = 14, RIGHT_M1 = 15;\nconst int PWM_FREQ = 2000, PWM_RES = 8;\nint speed = 160;\n\nvoid motorsBegin() {\n  ledcAttachChannel(LEFT_M0,  PWM_FREQ, PWM_RES, 4);\n  ledcAttachChannel(LEFT_M1,  PWM_FREQ, PWM_RES, 5);\n  ledcAttachChannel(RIGHT_M0, PWM_FREQ, PWM_RES, 6);\n  ledcAttachChannel(RIGHT_M1, PWM_FREQ, PWM_RES, 7);\n}\nvoid setMotors(int l0, int l1, int r0, int r1) {\n  ledcWrite(LEFT_M0, l0); ledcWrite(LEFT_M1, l1);\n  ledcWrite(RIGHT_M0, r0); ledcWrite(RIGHT_M1, r1);\n}\nvoid forward()   { setMotors(0, speed, 0, speed); }\nvoid backward()  { setMotors(speed, 0, speed, 0); }\nvoid turnLeft()  { setMotors(speed, 0, 0, speed); }\nvoid turnRight() { setMotors(0, speed, speed, 0); }\nvoid stopMotors(){ setMotors(0, 0, 0, 0); }\n\nvoid setup() {\n  Serial.begin(115200);\n  motorsBegin();\n  stopMotors();\n  Serial.println(\"Ready! Type w a s d x + - and press Enter.\");\n}\n\nvoid loop() {\n  if (Serial.available()) {\n    char c = Serial.read();\n    switch (c) {\n      case 'w': forward();    Serial.println(\"Forward\");  break;\n      case 's': backward();   Serial.println(\"Backward\"); break;\n      case 'a': turnLeft();   Serial.println(\"Left\");     break;\n      case 'd': turnRight();  Serial.println(\"Right\");    break;\n      case 'x': stopMotors(); Serial.println(\"Stop\");     break;\n      case '+': speed = min(speed + 20, 255); Serial.printf(\"Speed %d\\n\", speed); break;\n      case '-': speed = max(speed - 20, 80);  Serial.printf(\"Speed %d\\n\", speed); break;\n      default: break;   // ignore Enter / other keys\n    }\n  }\n}\n", "download": "sketch"}, "L8": {"title": "Lab 8 - Phone and PC web remote", "file": "L8_web_remote.ino", "lang": "cpp", "code": "// Lab 8 - WiFi remote control from your phone or PC browser\n// The robot creates its own WiFi hotspot. Connect your phone/laptop to it,\n// then open http://192.168.4.1 in a browser.\n//   - Hold a button (or W/A/S/D / arrow keys on a PC) to drive, release to stop.\n//   - Slider = speed, Light button = white flash LED.\n// Safety: if the robot hears nothing for 0.6 s while moving, it stops by itself.\n\n#include <WiFi.h>\n#include <WebServer.h>\n\n// ---------- Change these for your team ----------\nconst char* AP_SSID = \"Robot-{{TEAM}}\";   // must be unique in the classroom!\nconst char* AP_PASS = \"robot1234\";        // at least 8 characters\n\n// ---------- Motor pins ----------\nconst int LEFT_M0 = 13, LEFT_M1 = 12, RIGHT_M0 = 14, RIGHT_M1 = 15;\nconst int PWM_FREQ = 2000, PWM_RES = 8;\nconst int FLASH_LED = 4;\nconst int RED_LED   = 33;   // active LOW\n\nint speed = 170;\nbool moving = false;\nunsigned long lastCommand = 0;\nconst unsigned long FAILSAFE_MS = 600;\n\nWebServer server(80);\n\nvoid motorsBegin() {\n  ledcAttachChannel(LEFT_M0,  PWM_FREQ, PWM_RES, 4);\n  ledcAttachChannel(LEFT_M1,  PWM_FREQ, PWM_RES, 5);\n  ledcAttachChannel(RIGHT_M0, PWM_FREQ, PWM_RES, 6);\n  ledcAttachChannel(RIGHT_M1, PWM_FREQ, PWM_RES, 7);\n}\nvoid setMotors(int l0, int l1, int r0, int r1) {\n  ledcWrite(LEFT_M0, l0); ledcWrite(LEFT_M1, l1);\n  ledcWrite(RIGHT_M0, r0); ledcWrite(RIGHT_M1, r1);\n}\nvoid forward()   { setMotors(0, speed, 0, speed); moving = true; }\nvoid backward()  { setMotors(speed, 0, speed, 0); moving = true; }\nvoid turnLeft()  { setMotors(speed, 0, 0, speed); moving = true; }\nvoid turnRight() { setMotors(0, speed, speed, 0); moving = true; }\nvoid stopMotors(){ setMotors(0, 0, 0, 0);         moving = false; }\n\n// ---------- The web page (HTML + CSS + JavaScript) ----------\nconst char PAGE[] PROGMEM = R\"rawliteral(\n<!DOCTYPE html><html><head>\n<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,user-scalable=no\">\n<title>Robot Remote<\/title>\n<style>\n body{font-family:sans-serif;background:#10151c;color:#eee;text-align:center;margin:0;padding:16px;\n      user-select:none;-webkit-user-select:none;touch-action:none}\n h2{margin:6px 0 14px}\n .pad{display:grid;grid-template-columns:repeat(3,90px);grid-template-rows:repeat(3,90px);gap:10px;justify-content:center}\n button{font-size:30px;border:0;border-radius:16px;background:#2a6df4;color:#fff}\n button:active,button.on{background:#ffb703;color:#000}\n #stop{background:#e63946}\n .row{margin:18px auto;max-width:300px}\n input[type=range]{width:100%}\n #light{font-size:18px;padding:12px 24px;background:#444}\n #st{color:#9ab;font-size:14px}\n<\/style><\/head><body>\n<h2>Robot Remote<\/h2>\n<div class=\"pad\">\n <span><\/span><button data-c=\"forward\">&#9650;<\/button><span><\/span>\n <button data-c=\"left\">&#9664;<\/button><button id=\"stop\" data-c=\"stop\">&#9632;<\/button><button data-c=\"right\">&#9654;<\/button>\n <span><\/span><button data-c=\"backward\">&#9660;<\/button><span><\/span>\n<\/div>\n<div class=\"row\">Speed: <b id=\"sv\">170<\/b><br><input type=\"range\" id=\"sp\" min=\"80\" max=\"255\" value=\"170\"><\/div>\n<div class=\"row\"><button id=\"light\">Light: OFF<\/button><\/div>\n<div id=\"st\">PC keys: W A S D or arrow keys, Space = stop<\/div>\n<script>\nlet current='stop', timer=null, light=false;\nfunction send(path){ fetch(path).catch(()=>{document.getElementById('st').textContent='Lost connection...'}); }\nfunction go(c){\n  if(c===current) return;\n  current=c; clearInterval(timer);\n  send('/cmd?c='+c);\n  if(c!=='stop'){ timer=setInterval(()=>send('/cmd?c='+c),200); }   // keep-alive while held\n}\ndocument.querySelectorAll('[data-c]').forEach(b=>{\n  b.addEventListener('pointerdown',e=>{e.preventDefault();b.setPointerCapture(e.pointerId);go(b.dataset.c);});\n  ['pointerup','pointercancel'].forEach(ev=>b.addEventListener(ev,()=>go('stop')));\n});\nconst keys={w:'forward',ArrowUp:'forward',s:'backward',ArrowDown:'backward',a:'left',ArrowLeft:'left',d:'right',ArrowRight:'right',' ':'stop'};\ndocument.addEventListener('keydown',e=>{ if(keys[e.key]){e.preventDefault();go(keys[e.key]);} });\ndocument.addEventListener('keyup',e=>{ if(keys[e.key]) go('stop'); });\nconst sp=document.getElementById('sp');\nsp.addEventListener('input',()=>document.getElementById('sv').textContent=sp.value);\nsp.addEventListener('change',()=>send('/speed?v='+sp.value));\ndocument.getElementById('light').onclick=function(){\n  light=!light; this.textContent='Light: '+(light?'ON':'OFF'); send('/light?on='+(light?1:0));\n};\n<\/script><\/body><\/html>\n)rawliteral\";\n\n// ---------- Web handlers ----------\nvoid handleRoot() { server.send_P(200, \"text/html\", PAGE); }\n\nvoid handleCmd() {\n  String c = server.arg(\"c\");\n  lastCommand = millis();\n  if      (c == \"forward\")  forward();\n  else if (c == \"backward\") backward();\n  else if (c == \"left\")     turnLeft();\n  else if (c == \"right\")    turnRight();\n  else                      stopMotors();\n  server.send(200, \"text/plain\", \"OK \" + c);\n}\n\nvoid handleSpeed() {\n  speed = constrain(server.arg(\"v\").toInt(), 0, 255);\n  server.send(200, \"text/plain\", \"speed \" + String(speed));\n}\n\nvoid handleLight() {\n  bool on = server.arg(\"on\") == \"1\";\n  ledcWrite(FLASH_LED, on ? 60 : 0);   // 60/255 is bright enough\n  server.send(200, \"text/plain\", on ? \"light on\" : \"light off\");\n}\n\nvoid setup() {\n  Serial.begin(115200);\n  motorsBegin();\n  stopMotors();\n  ledcAttachChannel(FLASH_LED, 5000, 8, 8);   // flash LED on PWM channel 8\n  pinMode(RED_LED, OUTPUT);\n\n  WiFi.softAP(AP_SSID, AP_PASS);\n  WiFi.setSleep(false);                // faster response\n  Serial.print(\"Hotspot: \"); Serial.println(AP_SSID);\n  Serial.print(\"Open http://\"); Serial.println(WiFi.softAPIP());\n  digitalWrite(RED_LED, LOW);          // red LED on = WiFi ready\n\n  server.on(\"/\", handleRoot);\n  server.on(\"/cmd\", handleCmd);\n  server.on(\"/speed\", handleSpeed);\n  server.on(\"/light\", handleLight);\n  server.begin();\n}\n\nvoid loop() {\n  server.handleClient();\n  // Failsafe: stop if the controller went quiet (phone locked, WiFi dropped...)\n  if (moving && millis() - lastCommand > FAILSAFE_MS) {\n    stopMotors();\n    Serial.println(\"Failsafe stop\");\n  }\n}\n", "download": "sketch"}, "L9": {"title": "Lab 9 - MQTT robot", "file": "L9_mqtt_robot.ino", "lang": "cpp", "code": "// Lab 9 - MQTT robot\n// The robot joins the classroom WiFi, connects to the MQTT broker and\n// listens for commands. Anyone (MQTT Explorer, Node-RED, a phone app...) can\n// drive it by publishing to its command topic.\n//\n// Needs library: \"PubSubClient\" by Nick O'Leary  (Sketch > Include Library > Manage Libraries)\n//\n// Topics (replace {{TEAM}} with your team id):\n//   imakewemake/robot/{{TEAM}}/cmd     <- robot SUBSCRIBES here (commands in)\n//   imakewemake/robot/{{TEAM}}/status  -> robot PUBLISHES JSON status every 2 s\n//   imakewemake/robot/{{TEAM}}/online  -> \"online\" / \"offline\" (retained, last will)\n//\n// Commands (plain text):\n//   forward | backward | left | right | stop\n//   forward:800   -> move for 800 ms then stop (works for all 4 directions)\n//   speed:180     -> set speed 0..255\n//   light:on | light:off\n\n#include <WiFi.h>\n#include <PubSubClient.h>\n\n// ---------- Change these ----------\nconst char* WIFI_SSID   = \"{{WIFI_SSID}}\";\nconst char* WIFI_PASS   = \"{{WIFI_PASS}}\";\nconst char* MQTT_BROKER = \"{{BROKER}}\";   // IP address of the computer running Mosquitto\nconst int   MQTT_PORT   = 1883;\nconst char* TEAM        = \"{{TEAM}}\";\n\n// ---------- Motor pins ----------\nconst int LEFT_M0 = 13, LEFT_M1 = 12, RIGHT_M0 = 14, RIGHT_M1 = 15;\nconst int PWM_FREQ = 2000, PWM_RES = 8;\nconst int FLASH_LED = 4;\nconst int RED_LED   = 33;   // active LOW\n\nint speed = 170;\nbool lightOn = false;\nString state = \"stop\";\nunsigned long moveUntil = 0;                 // when a timed move should end (0 = none)\nconst unsigned long MAX_MOVE_MS = 3000;      // safety: untimed moves stop after 3 s\n\nString topicCmd, topicStatus, topicOnline;\nWiFiClient wifiClient;\nPubSubClient mqtt(wifiClient);\nunsigned long lastStatus = 0, lastReconnect = 0;\n\n// ---------- Motors ----------\nvoid motorsBegin() {\n  ledcAttachChannel(LEFT_M0,  PWM_FREQ, PWM_RES, 4);\n  ledcAttachChannel(LEFT_M1,  PWM_FREQ, PWM_RES, 5);\n  ledcAttachChannel(RIGHT_M0, PWM_FREQ, PWM_RES, 6);\n  ledcAttachChannel(RIGHT_M1, PWM_FREQ, PWM_RES, 7);\n}\nvoid setMotors(int l0, int l1, int r0, int r1) {\n  ledcWrite(LEFT_M0, l0); ledcWrite(LEFT_M1, l1);\n  ledcWrite(RIGHT_M0, r0); ledcWrite(RIGHT_M1, r1);\n}\nvoid drive(const String& dir) {\n  if      (dir == \"forward\")  setMotors(0, speed, 0, speed);\n  else if (dir == \"backward\") setMotors(speed, 0, speed, 0);\n  else if (dir == \"left\")     setMotors(speed, 0, 0, speed);\n  else if (dir == \"right\")    setMotors(0, speed, speed, 0);\n  else { setMotors(0, 0, 0, 0); state = \"stop\"; moveUntil = 0; return; }\n  state = dir;\n}\n\n// ---------- Status ----------\nvoid publishStatus() {\n  char json[160];\n  snprintf(json, sizeof(json),\n           \"{\\\"team\\\":\\\"%s\\\",\\\"state\\\":\\\"%s\\\",\\\"speed\\\":%d,\\\"light\\\":%s,\\\"rssi\\\":%d,\\\"uptime\\\":%lu}\",\n           TEAM, state.c_str(), speed, lightOn ? \"true\" : \"false\", WiFi.RSSI(), millis() / 1000);\n  mqtt.publish(topicStatus.c_str(), json);\n}\n\n// ---------- Incoming MQTT message ----------\nvoid onMessage(char* topic, byte* payload, unsigned int length) {\n  String msg;\n  for (unsigned int i = 0; i < length; i++) msg += (char)payload[i];\n  msg.trim();\n  msg.toLowerCase();\n  Serial.print(\"MQTT> \"); Serial.println(msg);\n\n  String cmd = msg, arg = \"\";\n  int colon = msg.indexOf(':');\n  if (colon >= 0) { cmd = msg.substring(0, colon); arg = msg.substring(colon + 1); }\n\n  if (cmd == \"speed\") {\n    speed = constrain(arg.toInt(), 0, 255);\n    if (state != \"stop\") drive(state);        // apply new speed right away\n  } else if (cmd == \"light\") {\n    lightOn = (arg == \"on\");\n    ledcWrite(FLASH_LED, lightOn ? 60 : 0);\n  } else if (cmd == \"forward\" || cmd == \"backward\" || cmd == \"left\" || cmd == \"right\") {\n    unsigned long ms = arg.length() ? (unsigned long)arg.toInt() : MAX_MOVE_MS;\n    ms = min(ms, MAX_MOVE_MS);\n    drive(cmd);\n    moveUntil = millis() + ms;\n  } else {\n    drive(\"stop\");                            // \"stop\" or anything unknown = stop\n  }\n  publishStatus();\n}\n\n// ---------- Connections ----------\nvoid connectWiFi() {\n  WiFi.mode(WIFI_STA);\n  WiFi.setSleep(false);\n  WiFi.begin(WIFI_SSID, WIFI_PASS);\n  Serial.print(\"WiFi connecting\");\n  while (WiFi.status() != WL_CONNECTED) { delay(500); Serial.print(\".\"); }\n  Serial.println();\n  Serial.print(\"WiFi OK, robot IP: \"); Serial.println(WiFi.localIP());\n}\n\nbool connectMQTT() {\n  String clientId = \"robot-\" + String(TEAM) + \"-\" + String((uint32_t)ESP.getEfuseMac(), HEX);\n  Serial.print(\"MQTT connecting to \"); Serial.println(MQTT_BROKER);\n  // Last Will: if the robot disappears, the broker publishes \"offline\" for us\n  if (mqtt.connect(clientId.c_str(), nullptr, nullptr, topicOnline.c_str(), 1, true, \"offline\")) {\n    mqtt.publish(topicOnline.c_str(), \"online\", true);\n    mqtt.subscribe(topicCmd.c_str());\n    Serial.print(\"MQTT OK, listening on \"); Serial.println(topicCmd);\n    digitalWrite(RED_LED, LOW);              // red LED on = connected\n    return true;\n  }\n  Serial.print(\"MQTT failed, rc=\"); Serial.println(mqtt.state());\n  digitalWrite(RED_LED, HIGH);\n  return false;\n}\n\nvoid setup() {\n  Serial.begin(115200);\n  motorsBegin();\n  drive(\"stop\");\n  ledcAttachChannel(FLASH_LED, 5000, 8, 8);\n  pinMode(RED_LED, OUTPUT);\n  digitalWrite(RED_LED, HIGH);\n\n  String base = \"imakewemake/robot/\" + String(TEAM);\n  topicCmd    = base + \"/cmd\";\n  topicStatus = base + \"/status\";\n  topicOnline = base + \"/online\";\n\n  connectWiFi();\n  mqtt.setServer(MQTT_BROKER, MQTT_PORT);\n  mqtt.setCallback(onMessage);\n  connectMQTT();\n}\n\nvoid loop() {\n  if (WiFi.status() != WL_CONNECTED) {        // WiFi lost: stop and reconnect\n    drive(\"stop\");\n    connectWiFi();\n  }\n  if (!mqtt.connected()) {\n    drive(\"stop\");                            // never drive blind\n    if (millis() - lastReconnect > 3000) { lastReconnect = millis(); connectMQTT(); }\n  } else {\n    mqtt.loop();                              // process incoming messages\n  }\n\n  if (moveUntil && (long)(millis() - moveUntil) >= 0) {   // timed move finished\n    drive(\"stop\");\n    publishStatus();\n  }\n  if (mqtt.connected() && millis() - lastStatus > 2000) {\n    lastStatus = millis();\n    publishStatus();\n  }\n}\n", "download": "sketch"}, "F1": {"title": "Lab 10 - Node-RED MQTT basics flow", "file": "robot-mqtt-basics-flow.json", "lang": "json", "code": "[\n  {\n    \"id\": \"fa_tab\",\n    \"type\": \"tab\",\n    \"label\": \"Robot - MQTT basics\",\n    \"disabled\": false,\n    \"info\": \"Click the blue square on an inject node to send that command to the robot.\"\n  },\n  {\n    \"id\": \"fa_c1\",\n    \"type\": \"comment\",\n    \"z\": \"fa_tab\",\n    \"name\": \"1) Click a button to send a command\",\n    \"info\": \"Each inject node publishes its text to the robot's cmd topic.\",\n    \"x\": 190,\n    \"y\": 40,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fa_i0\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Forward 1 s\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"forward:1000\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 90,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i1\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Backward 1 s\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"backward:1000\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 135,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i2\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Left 0.5 s\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"left:500\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 180,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i3\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Right 0.5 s\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"right:500\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 225,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i4\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"STOP\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"stop\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 270,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i5\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Speed 200\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"speed:200\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 315,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i6\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Light on\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"light:on\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 360,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_i7\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Light off\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"light:off\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 405,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_dance_i\",\n    \"type\": \"inject\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Dance!\",\n    \"props\": [\n      {\n        \"p\": \"payload\"\n      }\n    ],\n    \"repeat\": \"\",\n    \"crontab\": \"\",\n    \"once\": false,\n    \"onceDelay\": 0.1,\n    \"topic\": \"\",\n    \"payload\": \"go\",\n    \"payloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 460,\n    \"wires\": [\n      [\n        \"fa_dance\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_dance\",\n    \"type\": \"function\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Square dance\",\n    \"func\": \"// Square dance: a list of [command, wait-before-next (ms)]\\nconst steps = [\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700],\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700],\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700],\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700]\\n];\\nlet t = 0;\\nfor (const [cmd, wait] of steps) {\\n    setTimeout(() => node.send({ payload: cmd }), t);\\n    t += wait;\\n}\\nnode.status({ fill: \\\"blue\\\", shape: \\\"dot\\\", text: \\\"dancing for \\\" + (t / 1000) + \\\" s\\\" });\\nsetTimeout(() => node.status({}), t);\\nreturn null;\",\n    \"outputs\": 1,\n    \"timeout\": 0,\n    \"noerr\": 0,\n    \"initialize\": \"\",\n    \"finalize\": \"\",\n    \"libs\": [],\n    \"x\": 360,\n    \"y\": 460,\n    \"wires\": [\n      [\n        \"fa_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_out\",\n    \"type\": \"mqtt out\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Robot commands\",\n    \"topic\": \"imakewemake/robot/{{TEAM}}/cmd\",\n    \"qos\": \"0\",\n    \"retain\": \"false\",\n    \"respTopic\": \"\",\n    \"contentType\": \"\",\n    \"userProps\": \"\",\n    \"correl\": \"\",\n    \"expiry\": \"\",\n    \"broker\": \"fa_broker\",\n    \"x\": 600,\n    \"y\": 250,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fa_c2\",\n    \"type\": \"comment\",\n    \"z\": \"fa_tab\",\n    \"name\": \"2) Watch what the robot reports\",\n    \"info\": \"Open the Debug sidebar (bug icon, top right) to see messages.\",\n    \"x\": 190,\n    \"y\": 560,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fa_in_s\",\n    \"type\": \"mqtt in\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Robot status\",\n    \"topic\": \"imakewemake/robot/{{TEAM}}/status\",\n    \"qos\": \"0\",\n    \"datatype\": \"json\",\n    \"broker\": \"fa_broker\",\n    \"nl\": false,\n    \"rap\": true,\n    \"rh\": 0,\n    \"inputs\": 0,\n    \"x\": 160,\n    \"y\": 610,\n    \"wires\": [\n      [\n        \"fa_dbg_s\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_dbg_s\",\n    \"type\": \"debug\",\n    \"z\": \"fa_tab\",\n    \"name\": \"status\",\n    \"active\": true,\n    \"tosidebar\": true,\n    \"console\": false,\n    \"tostatus\": true,\n    \"complete\": \"payload\",\n    \"targetType\": \"msg\",\n    \"statusVal\": \"payload\",\n    \"statusType\": \"auto\",\n    \"x\": 400,\n    \"y\": 610,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fa_in_o\",\n    \"type\": \"mqtt in\",\n    \"z\": \"fa_tab\",\n    \"name\": \"Robot online?\",\n    \"topic\": \"imakewemake/robot/{{TEAM}}/online\",\n    \"qos\": \"0\",\n    \"datatype\": \"utf8\",\n    \"broker\": \"fa_broker\",\n    \"nl\": false,\n    \"rap\": true,\n    \"rh\": 0,\n    \"inputs\": 0,\n    \"x\": 160,\n    \"y\": 660,\n    \"wires\": [\n      [\n        \"fa_dbg_o\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fa_dbg_o\",\n    \"type\": \"debug\",\n    \"z\": \"fa_tab\",\n    \"name\": \"online\",\n    \"active\": true,\n    \"tosidebar\": true,\n    \"console\": false,\n    \"tostatus\": true,\n    \"complete\": \"payload\",\n    \"targetType\": \"msg\",\n    \"statusVal\": \"payload\",\n    \"statusType\": \"auto\",\n    \"x\": 400,\n    \"y\": 660,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fa_broker\",\n    \"type\": \"mqtt-broker\",\n    \"name\": \"Classroom broker\",\n    \"broker\": \"{{BROKER}}\",\n    \"port\": \"1883\",\n    \"clientid\": \"\",\n    \"autoConnect\": true,\n    \"usetls\": false,\n    \"protocolVersion\": \"4\",\n    \"keepalive\": \"60\",\n    \"cleansession\": true,\n    \"autoUnsubscribe\": true,\n    \"birthTopic\": \"\",\n    \"birthQos\": \"0\",\n    \"birthRetain\": \"false\",\n    \"birthPayload\": \"\",\n    \"birthMsg\": {},\n    \"closeTopic\": \"\",\n    \"closeQos\": \"0\",\n    \"closeRetain\": \"false\",\n    \"closePayload\": \"\",\n    \"closeMsg\": {},\n    \"willTopic\": \"\",\n    \"willQos\": \"0\",\n    \"willRetain\": \"false\",\n    \"willPayload\": \"\",\n    \"willMsg\": {},\n    \"userProps\": \"\",\n    \"sessionExpiry\": \"\"\n  }\n]", "download": "file"}, "F2": {"title": "Lab 11 - Node-RED robot dashboard flow", "file": "robot-dashboard-flow.json", "lang": "json", "code": "[\n  {\n    \"id\": \"fb_tab\",\n    \"type\": \"tab\",\n    \"label\": \"Robot - Dashboard\",\n    \"disabled\": false,\n    \"info\": \"Open the dashboard at http://localhost:1880/dashboard\"\n  },\n  {\n    \"id\": \"fb_c1\",\n    \"type\": \"comment\",\n    \"z\": \"fb_tab\",\n    \"name\": \"Dashboard: open http://localhost:1880/dashboard\",\n    \"info\": \"Needs @flowfuse/node-red-dashboard (Manage palette > Install).\",\n    \"x\": 230,\n    \"y\": 40,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_b_f\",\n    \"type\": \"ui-button\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_drive\",\n    \"name\": \"Forward\",\n    \"label\": \"Forward\",\n    \"order\": 1,\n    \"width\": \"6\",\n    \"height\": \"1\",\n    \"emulateClick\": false,\n    \"tooltip\": \"\",\n    \"color\": \"\",\n    \"bgcolor\": \"\",\n    \"className\": \"\",\n    \"icon\": \"arrow-up\",\n    \"iconPosition\": \"left\",\n    \"payload\": \"forward\",\n    \"payloadType\": \"str\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"buttonColor\": \"\",\n    \"textColor\": \"\",\n    \"iconColor\": \"\",\n    \"enableClick\": true,\n    \"enablePointerdown\": false,\n    \"pointerdownPayload\": \"\",\n    \"pointerdownPayloadType\": \"str\",\n    \"enablePointerup\": false,\n    \"pointerupPayload\": \"\",\n    \"pointerupPayloadType\": \"str\",\n    \"x\": 150,\n    \"y\": 100,\n    \"wires\": [\n      [\n        \"fb_step\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_b_l\",\n    \"type\": \"ui-button\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_drive\",\n    \"name\": \"Left\",\n    \"label\": \"Left\",\n    \"order\": 2,\n    \"width\": \"2\",\n    \"height\": \"1\",\n    \"emulateClick\": false,\n    \"tooltip\": \"\",\n    \"color\": \"\",\n    \"bgcolor\": \"\",\n    \"className\": \"\",\n    \"icon\": \"arrow-left\",\n    \"iconPosition\": \"left\",\n    \"payload\": \"left\",\n    \"payloadType\": \"str\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"buttonColor\": \"\",\n    \"textColor\": \"\",\n    \"iconColor\": \"\",\n    \"enableClick\": true,\n    \"enablePointerdown\": false,\n    \"pointerdownPayload\": \"\",\n    \"pointerdownPayloadType\": \"str\",\n    \"enablePointerup\": false,\n    \"pointerupPayload\": \"\",\n    \"pointerupPayloadType\": \"str\",\n    \"x\": 150,\n    \"y\": 150,\n    \"wires\": [\n      [\n        \"fb_step\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_b_s\",\n    \"type\": \"ui-button\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_drive\",\n    \"name\": \"STOP\",\n    \"label\": \"STOP\",\n    \"order\": 3,\n    \"width\": \"2\",\n    \"height\": \"1\",\n    \"emulateClick\": false,\n    \"tooltip\": \"\",\n    \"color\": \"\",\n    \"bgcolor\": \"#e63946\",\n    \"className\": \"\",\n    \"icon\": \"stop\",\n    \"iconPosition\": \"left\",\n    \"payload\": \"stop\",\n    \"payloadType\": \"str\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"buttonColor\": \"#e63946\",\n    \"textColor\": \"\",\n    \"iconColor\": \"\",\n    \"enableClick\": true,\n    \"enablePointerdown\": false,\n    \"pointerdownPayload\": \"\",\n    \"pointerdownPayloadType\": \"str\",\n    \"enablePointerup\": false,\n    \"pointerupPayload\": \"\",\n    \"pointerupPayloadType\": \"str\",\n    \"x\": 150,\n    \"y\": 200,\n    \"wires\": [\n      [\n        \"fb_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_b_r\",\n    \"type\": \"ui-button\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_drive\",\n    \"name\": \"Right\",\n    \"label\": \"Right\",\n    \"order\": 4,\n    \"width\": \"2\",\n    \"height\": \"1\",\n    \"emulateClick\": false,\n    \"tooltip\": \"\",\n    \"color\": \"\",\n    \"bgcolor\": \"\",\n    \"className\": \"\",\n    \"icon\": \"arrow-right\",\n    \"iconPosition\": \"left\",\n    \"payload\": \"right\",\n    \"payloadType\": \"str\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"buttonColor\": \"\",\n    \"textColor\": \"\",\n    \"iconColor\": \"\",\n    \"enableClick\": true,\n    \"enablePointerdown\": false,\n    \"pointerdownPayload\": \"\",\n    \"pointerdownPayloadType\": \"str\",\n    \"enablePointerup\": false,\n    \"pointerupPayload\": \"\",\n    \"pointerupPayloadType\": \"str\",\n    \"x\": 150,\n    \"y\": 250,\n    \"wires\": [\n      [\n        \"fb_step\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_b_b\",\n    \"type\": \"ui-button\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_drive\",\n    \"name\": \"Backward\",\n    \"label\": \"Backward\",\n    \"order\": 5,\n    \"width\": \"6\",\n    \"height\": \"1\",\n    \"emulateClick\": false,\n    \"tooltip\": \"\",\n    \"color\": \"\",\n    \"bgcolor\": \"\",\n    \"className\": \"\",\n    \"icon\": \"arrow-down\",\n    \"iconPosition\": \"left\",\n    \"payload\": \"backward\",\n    \"payloadType\": \"str\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"buttonColor\": \"\",\n    \"textColor\": \"\",\n    \"iconColor\": \"\",\n    \"enableClick\": true,\n    \"enablePointerdown\": false,\n    \"pointerdownPayload\": \"\",\n    \"pointerdownPayloadType\": \"str\",\n    \"enablePointerup\": false,\n    \"pointerupPayload\": \"\",\n    \"pointerupPayloadType\": \"str\",\n    \"x\": 150,\n    \"y\": 300,\n    \"wires\": [\n      [\n        \"fb_step\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_step\",\n    \"type\": \"function\",\n    \"z\": \"fb_tab\",\n    \"name\": \"add step time\",\n    \"func\": \"// forward -> forward:600  (time comes from the Step time slider)\\nconst ms = flow.get('stepMs') || 600;\\nmsg.payload = msg.payload + ':' + ms;\\nreturn msg;\",\n    \"outputs\": 1,\n    \"timeout\": 0,\n    \"noerr\": 0,\n    \"initialize\": \"\",\n    \"finalize\": \"\",\n    \"libs\": [],\n    \"x\": 380,\n    \"y\": 140,\n    \"wires\": [\n      [\n        \"fb_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_out\",\n    \"type\": \"mqtt out\",\n    \"z\": \"fb_tab\",\n    \"name\": \"Robot commands\",\n    \"topic\": \"imakewemake/robot/{{TEAM}}/cmd\",\n    \"qos\": \"0\",\n    \"retain\": \"false\",\n    \"respTopic\": \"\",\n    \"contentType\": \"\",\n    \"userProps\": \"\",\n    \"correl\": \"\",\n    \"expiry\": \"\",\n    \"broker\": \"fb_broker\",\n    \"x\": 640,\n    \"y\": 220,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_sl_speed\",\n    \"type\": \"ui-slider\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_set\",\n    \"name\": \"Speed\",\n    \"label\": \"Speed\",\n    \"tooltip\": \"\",\n    \"order\": 1,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"passthru\": false,\n    \"outs\": \"end\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"thumbLabel\": \"true\",\n    \"showTicks\": \"false\",\n    \"min\": 80,\n    \"max\": \"255\",\n    \"step\": \"5\",\n    \"className\": \"\",\n    \"iconPrepend\": \"\",\n    \"iconAppend\": \"\",\n    \"color\": \"\",\n    \"colorTrack\": \"\",\n    \"colorThumb\": \"\",\n    \"showTextField\": false,\n    \"x\": 150,\n    \"y\": 380,\n    \"wires\": [\n      [\n        \"fb_speed_fn\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_speed_fn\",\n    \"type\": \"function\",\n    \"z\": \"fb_tab\",\n    \"name\": \"speed:N\",\n    \"func\": \"msg.payload = 'speed:' + msg.payload;\\nreturn msg;\",\n    \"outputs\": 1,\n    \"timeout\": 0,\n    \"noerr\": 0,\n    \"initialize\": \"\",\n    \"finalize\": \"\",\n    \"libs\": [],\n    \"x\": 380,\n    \"y\": 380,\n    \"wires\": [\n      [\n        \"fb_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_sl_step\",\n    \"type\": \"ui-slider\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_set\",\n    \"name\": \"Step time (ms)\",\n    \"label\": \"Step time (ms)\",\n    \"tooltip\": \"\",\n    \"order\": 2,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"passthru\": false,\n    \"outs\": \"end\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"thumbLabel\": \"true\",\n    \"showTicks\": \"false\",\n    \"min\": 200,\n    \"max\": \"2000\",\n    \"step\": \"100\",\n    \"className\": \"\",\n    \"iconPrepend\": \"\",\n    \"iconAppend\": \"\",\n    \"color\": \"\",\n    \"colorTrack\": \"\",\n    \"colorThumb\": \"\",\n    \"showTextField\": false,\n    \"x\": 160,\n    \"y\": 430,\n    \"wires\": [\n      [\n        \"fb_set_step\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_set_step\",\n    \"type\": \"change\",\n    \"z\": \"fb_tab\",\n    \"name\": \"remember step time\",\n    \"rules\": [\n      {\n        \"t\": \"set\",\n        \"p\": \"stepMs\",\n        \"pt\": \"flow\",\n        \"to\": \"payload\",\n        \"tot\": \"msg\"\n      }\n    ],\n    \"action\": \"\",\n    \"property\": \"\",\n    \"from\": \"\",\n    \"to\": \"\",\n    \"reg\": false,\n    \"x\": 400,\n    \"y\": 430,\n    \"wires\": [\n      []\n    ]\n  },\n  {\n    \"id\": \"fb_sw_light\",\n    \"type\": \"ui-switch\",\n    \"z\": \"fb_tab\",\n    \"name\": \"Light\",\n    \"label\": \"Flash LED\",\n    \"group\": \"fb_g_set\",\n    \"order\": 3,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"passthru\": false,\n    \"decouple\": \"false\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"style\": \"\",\n    \"className\": \"\",\n    \"layout\": \"row-spread\",\n    \"clickableArea\": \"switch\",\n    \"onvalue\": \"light:on\",\n    \"onvalueType\": \"str\",\n    \"onicon\": \"\",\n    \"oncolor\": \"\",\n    \"offvalue\": \"light:off\",\n    \"offvalueType\": \"str\",\n    \"officon\": \"\",\n    \"offcolor\": \"\",\n    \"x\": 140,\n    \"y\": 480,\n    \"wires\": [\n      [\n        \"fb_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_b_dance\",\n    \"type\": \"ui-button\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_set\",\n    \"name\": \"Square dance\",\n    \"label\": \"Square dance\",\n    \"order\": 4,\n    \"width\": \"0\",\n    \"height\": \"1\",\n    \"emulateClick\": false,\n    \"tooltip\": \"\",\n    \"color\": \"\",\n    \"bgcolor\": \"\",\n    \"className\": \"\",\n    \"icon\": \"dance-ballroom\",\n    \"iconPosition\": \"left\",\n    \"payload\": \"go\",\n    \"payloadType\": \"str\",\n    \"topic\": \"topic\",\n    \"topicType\": \"msg\",\n    \"buttonColor\": \"\",\n    \"textColor\": \"\",\n    \"iconColor\": \"\",\n    \"enableClick\": true,\n    \"enablePointerdown\": false,\n    \"pointerdownPayload\": \"\",\n    \"pointerdownPayloadType\": \"str\",\n    \"enablePointerup\": false,\n    \"pointerupPayload\": \"\",\n    \"pointerupPayloadType\": \"str\",\n    \"x\": 160,\n    \"y\": 530,\n    \"wires\": [\n      [\n        \"fb_dance\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_dance\",\n    \"type\": \"function\",\n    \"z\": \"fb_tab\",\n    \"name\": \"Square dance\",\n    \"func\": \"// Square dance: a list of [command, wait-before-next (ms)]\\nconst steps = [\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700],\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700],\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700],\\n  [\\\"forward:800\\\", 1000],\\n  [\\\"right:450\\\",    700]\\n];\\nlet t = 0;\\nfor (const [cmd, wait] of steps) {\\n    setTimeout(() => node.send({ payload: cmd }), t);\\n    t += wait;\\n}\\nnode.status({ fill: \\\"blue\\\", shape: \\\"dot\\\", text: \\\"dancing for \\\" + (t / 1000) + \\\" s\\\" });\\nsetTimeout(() => node.status({}), t);\\nreturn null;\",\n    \"outputs\": 1,\n    \"timeout\": 0,\n    \"noerr\": 0,\n    \"initialize\": \"\",\n    \"finalize\": \"\",\n    \"libs\": [],\n    \"x\": 380,\n    \"y\": 530,\n    \"wires\": [\n      [\n        \"fb_out\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_in_s\",\n    \"type\": \"mqtt in\",\n    \"z\": \"fb_tab\",\n    \"name\": \"Robot status\",\n    \"topic\": \"imakewemake/robot/{{TEAM}}/status\",\n    \"qos\": \"0\",\n    \"datatype\": \"json\",\n    \"broker\": \"fb_broker\",\n    \"nl\": false,\n    \"rap\": true,\n    \"rh\": 0,\n    \"inputs\": 0,\n    \"x\": 150,\n    \"y\": 640,\n    \"wires\": [\n      [\n        \"fb_split\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_split\",\n    \"type\": \"function\",\n    \"z\": \"fb_tab\",\n    \"name\": \"split status\",\n    \"func\": \"const s = msg.payload;\\nreturn [\\n  { payload: s.state },\\n  { payload: s.speed },\\n  { payload: s.rssi + ' dBm' },\\n  { payload: s.uptime + ' s' }\\n];\",\n    \"outputs\": 4,\n    \"timeout\": 0,\n    \"noerr\": 0,\n    \"initialize\": \"\",\n    \"finalize\": \"\",\n    \"libs\": [],\n    \"x\": 370,\n    \"y\": 640,\n    \"wires\": [\n      [\n        \"fb_t_state\"\n      ],\n      [\n        \"fb_t_speed\"\n      ],\n      [\n        \"fb_t_rssi\"\n      ],\n      [\n        \"fb_t_up\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_t_state\",\n    \"type\": \"ui-text\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_stat\",\n    \"order\": 2,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"name\": \"Moving\",\n    \"label\": \"Moving\",\n    \"format\": \"{{msg.payload}}\",\n    \"layout\": \"row-spread\",\n    \"style\": false,\n    \"font\": \"\",\n    \"fontSize\": 16,\n    \"color\": \"#717171\",\n    \"wrapText\": false,\n    \"className\": \"\",\n    \"x\": 600,\n    \"y\": 600,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_t_speed\",\n    \"type\": \"ui-text\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_stat\",\n    \"order\": 3,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"name\": \"Speed\",\n    \"label\": \"Speed\",\n    \"format\": \"{{msg.payload}}\",\n    \"layout\": \"row-spread\",\n    \"style\": false,\n    \"font\": \"\",\n    \"fontSize\": 16,\n    \"color\": \"#717171\",\n    \"wrapText\": false,\n    \"className\": \"\",\n    \"x\": 600,\n    \"y\": 640,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_t_rssi\",\n    \"type\": \"ui-text\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_stat\",\n    \"order\": 4,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"name\": \"WiFi signal\",\n    \"label\": \"WiFi signal\",\n    \"format\": \"{{msg.payload}}\",\n    \"layout\": \"row-spread\",\n    \"style\": false,\n    \"font\": \"\",\n    \"fontSize\": 16,\n    \"color\": \"#717171\",\n    \"wrapText\": false,\n    \"className\": \"\",\n    \"x\": 610,\n    \"y\": 680,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_t_up\",\n    \"type\": \"ui-text\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_stat\",\n    \"order\": 5,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"name\": \"Uptime\",\n    \"label\": \"Uptime\",\n    \"format\": \"{{msg.payload}}\",\n    \"layout\": \"row-spread\",\n    \"style\": false,\n    \"font\": \"\",\n    \"fontSize\": 16,\n    \"color\": \"#717171\",\n    \"wrapText\": false,\n    \"className\": \"\",\n    \"x\": 600,\n    \"y\": 720,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_in_o\",\n    \"type\": \"mqtt in\",\n    \"z\": \"fb_tab\",\n    \"name\": \"Robot online?\",\n    \"topic\": \"imakewemake/robot/{{TEAM}}/online\",\n    \"qos\": \"0\",\n    \"datatype\": \"utf8\",\n    \"broker\": \"fb_broker\",\n    \"nl\": false,\n    \"rap\": true,\n    \"rh\": 0,\n    \"inputs\": 0,\n    \"x\": 160,\n    \"y\": 780,\n    \"wires\": [\n      [\n        \"fb_t_online\"\n      ]\n    ]\n  },\n  {\n    \"id\": \"fb_t_online\",\n    \"type\": \"ui-text\",\n    \"z\": \"fb_tab\",\n    \"group\": \"fb_g_stat\",\n    \"order\": 1,\n    \"width\": \"0\",\n    \"height\": \"0\",\n    \"name\": \"Connection\",\n    \"label\": \"Connection\",\n    \"format\": \"{{msg.payload}}\",\n    \"layout\": \"row-spread\",\n    \"style\": false,\n    \"font\": \"\",\n    \"fontSize\": 16,\n    \"color\": \"#717171\",\n    \"wrapText\": false,\n    \"className\": \"\",\n    \"x\": 610,\n    \"y\": 780,\n    \"wires\": []\n  },\n  {\n    \"id\": \"fb_base\",\n    \"type\": \"ui-base\",\n    \"name\": \"Robot UI\",\n    \"path\": \"/dashboard\",\n    \"includeClientData\": true,\n    \"acceptsClientConfig\": [\n      \"ui-notification\",\n      \"ui-control\"\n    ],\n    \"showPathInSidebar\": false,\n    \"showPageTitle\": true,\n    \"navigationStyle\": \"default\",\n    \"titleBarStyle\": \"default\"\n  },\n  {\n    \"id\": \"fb_theme\",\n    \"type\": \"ui-theme\",\n    \"name\": \"Robot theme\",\n    \"colors\": {\n      \"surface\": \"#14202b\",\n      \"primary\": \"#0b7a5c\",\n      \"bgPage\": \"#eef2f1\",\n      \"groupBg\": \"#ffffff\",\n      \"groupOutline\": \"#cfd8d6\"\n    },\n    \"sizes\": {\n      \"density\": \"default\",\n      \"pagePadding\": \"12px\",\n      \"groupGap\": \"12px\",\n      \"groupBorderRadius\": \"8px\",\n      \"widgetGap\": \"12px\"\n    }\n  },\n  {\n    \"id\": \"fb_page\",\n    \"type\": \"ui-page\",\n    \"name\": \"Robot {{TEAM}}\",\n    \"ui\": \"fb_base\",\n    \"path\": \"/robot\",\n    \"icon\": \"robot\",\n    \"layout\": \"grid\",\n    \"theme\": \"fb_theme\",\n    \"breakpoints\": [\n      {\n        \"name\": \"Default\",\n        \"px\": \"0\",\n        \"cols\": \"3\"\n      },\n      {\n        \"name\": \"Tablet\",\n        \"px\": \"576\",\n        \"cols\": \"6\"\n      },\n      {\n        \"name\": \"Small Desktop\",\n        \"px\": \"768\",\n        \"cols\": \"9\"\n      },\n      {\n        \"name\": \"Desktop\",\n        \"px\": \"1024\",\n        \"cols\": \"12\"\n      }\n    ],\n    \"order\": 1,\n    \"className\": \"\",\n    \"visible\": \"true\",\n    \"disabled\": \"false\"\n  },\n  {\n    \"id\": \"fb_g_drive\",\n    \"type\": \"ui-group\",\n    \"name\": \"Drive\",\n    \"page\": \"fb_page\",\n    \"width\": \"6\",\n    \"height\": \"1\",\n    \"order\": 1,\n    \"showTitle\": true,\n    \"className\": \"\",\n    \"visible\": \"true\",\n    \"disabled\": \"false\",\n    \"groupType\": \"default\"\n  },\n  {\n    \"id\": \"fb_g_set\",\n    \"type\": \"ui-group\",\n    \"name\": \"Settings\",\n    \"page\": \"fb_page\",\n    \"width\": \"3\",\n    \"height\": \"1\",\n    \"order\": 2,\n    \"showTitle\": true,\n    \"className\": \"\",\n    \"visible\": \"true\",\n    \"disabled\": \"false\",\n    \"groupType\": \"default\"\n  },\n  {\n    \"id\": \"fb_g_stat\",\n    \"type\": \"ui-group\",\n    \"name\": \"Robot status\",\n    \"page\": \"fb_page\",\n    \"width\": \"3\",\n    \"height\": \"1\",\n    \"order\": 3,\n    \"showTitle\": true,\n    \"className\": \"\",\n    \"visible\": \"true\",\n    \"disabled\": \"false\",\n    \"groupType\": \"default\"\n  },\n  {\n    \"id\": \"fb_broker\",\n    \"type\": \"mqtt-broker\",\n    \"name\": \"Classroom broker\",\n    \"broker\": \"{{BROKER}}\",\n    \"port\": \"1883\",\n    \"clientid\": \"\",\n    \"autoConnect\": true,\n    \"usetls\": false,\n    \"protocolVersion\": \"4\",\n    \"keepalive\": \"60\",\n    \"cleansession\": true,\n    \"autoUnsubscribe\": true,\n    \"birthTopic\": \"\",\n    \"birthQos\": \"0\",\n    \"birthRetain\": \"false\",\n    \"birthPayload\": \"\",\n    \"birthMsg\": {},\n    \"closeTopic\": \"\",\n    \"closeQos\": \"0\",\n    \"closeRetain\": \"false\",\n    \"closePayload\": \"\",\n    \"closeMsg\": {},\n    \"willTopic\": \"\",\n    \"willQos\": \"0\",\n    \"willRetain\": \"false\",\n    \"willPayload\": \"\",\n    \"willMsg\": {},\n    \"userProps\": \"\",\n    \"sessionExpiry\": \"\"\n  }\n]", "download": "file"}, "boardsurl": {"title": "Additional Boards Manager URL", "file": "Additional Boards Manager URL", "lang": "none", "code": "https://espressif.github.io/arduino-esp32/package_esp32_index.json\n", "download": null}, "cam_model": {"title": "CameraWebServer - camera model lines", "file": "CameraWebServer - camera model lines", "lang": "cpp", "code": "// Put // in front of the model that is switched on, for example:\n//#define CAMERA_MODEL_ESP_EYE  // Has PSRAM\n\n// ...and remove the // in front of AI_THINKER:\n#define CAMERA_MODEL_AI_THINKER // Has PSRAM\n", "download": null}, "cam_wifi": {"title": "CameraWebServer - WiFi lines", "file": "CameraWebServer - WiFi lines", "lang": "cpp", "code": "const char *ssid = \"{{WIFI_SSID}}\";\nconst char *password = \"{{WIFI_PASS}}\";\n", "download": null}, "kit_urls": {"title": "Kit firmware - URLs you can open", "file": "Kit firmware - URLs you can open", "lang": "none", "code": "http://192.168.4.1/           remote control page\nhttp://192.168.4.1/go         drive forward\nhttp://192.168.4.1/back       drive backward\nhttp://192.168.4.1/left       turn left\nhttp://192.168.4.1/right      turn right\nhttp://192.168.4.1/stop       stop\nhttp://192.168.4.1/ledon      flash LED on\nhttp://192.168.4.1/ledoff     flash LED off\nhttp://192.168.4.1:81/stream  live camera video only\n", "download": null}, "kit_ssid": {"title": "ESP32_Camera_4WD_Robot_Car_OV3660_V3.ino - line 9", "file": "ESP32_Camera_4WD_Robot_Car_OV3660_V3.ino - line 9", "lang": "cpp", "code": "const char* ssid1 = \"ESP32-CAM Robot {{TEAM}}\";\n", "download": null}, "mosq_conf": {"title": "mosquitto.conf", "file": "mosquitto.conf", "lang": "ini", "code": "# Classroom broker: accept connections from other computers and robots\nlistener 1883 0.0.0.0\nallow_anonymous true\n", "download": null}, "mosq_run": {"title": "Command Prompt (run as Administrator)", "file": "Command Prompt (run as Administrator)", "lang": "bash", "code": "cd \"C:\\Program Files\\mosquitto\"\nmosquitto -c mosquitto.conf -v\n", "download": null}, "mosq_fw": {"title": "Command Prompt (run as Administrator) - open port 1883", "file": "Command Prompt (run as Administrator) - open port 1883", "lang": "bash", "code": "netsh advfirewall firewall add rule name=\"Mosquitto MQTT\" dir=in action=allow protocol=TCP localport=1883\n", "download": null}, "mosq_test": {"title": "Test from any computer with Mosquitto installed", "file": "Test from any computer with Mosquitto installed", "lang": "bash", "code": "# Window 1 - listen to everything your robot says\nmosquitto_sub -h {{BROKER}} -t \"imakewemake/robot/{{TEAM}}/#\" -v\n\n# Window 2 - send commands\nmosquitto_pub -h {{BROKER}} -t \"imakewemake/robot/{{TEAM}}/cmd\" -m \"forward:1000\"\nmosquitto_pub -h {{BROKER}} -t \"imakewemake/robot/{{TEAM}}/cmd\" -m \"speed:220\"\nmosquitto_pub -h {{BROKER}} -t \"imakewemake/robot/{{TEAM}}/cmd\" -m \"stop\"\n", "download": null}, "mosq_class": {"title": "Instructor - see every robot in the room", "file": "Instructor - see every robot in the room", "lang": "bash", "code": "mosquitto_sub -h localhost -t \"imakewemake/robot/+/online\" -v\n", "download": null}, "nr_install": {"title": "Command Prompt / Terminal", "file": "Command Prompt / Terminal", "lang": "bash", "code": "node --version\nnpm install -g --unsafe-perm node-red\nnode-red\n", "download": null}, "nr_palette": {"title": "Palette module to install", "file": "Palette module to install", "lang": "none", "code": "@flowfuse/node-red-dashboard\n", "download": null}, "topics": {"title": "Your robot's MQTT topics", "file": "Your robot's MQTT topics", "lang": "none", "code": "imakewemake/robot/{{TEAM}}/cmd      commands TO the robot\nimakewemake/robot/{{TEAM}}/status   JSON status FROM the robot (every 2 s)\nimakewemake/robot/{{TEAM}}/online   \"online\" / \"offline\" (retained)\n", "download": null}, "commands": {"title": "Commands the MQTT robot understands", "file": "Commands the MQTT robot understands", "lang": "none", "code": "forward          backward          left          right          stop\nforward:800      move forward for 800 ms, then stop (any direction)\nspeed:180        set speed, 0-255 (try 120-255)\nlight:on         flash LED on\nlight:off        flash LED off\n", "download": null}}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js" data-manual></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-c.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-cpp.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-json.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-ini.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script>
+/* ---------- config the instructor can edit ---------- */
+const CONFIG = {
+  manualUrl: "downloads/ESP32_Camera_4WD_Robot_Car_Kit_Manual.pdf",   // kit manual PDF
+  // Copy "Demo Video.mp4" from the kit folder into media/ as demo-video.mp4, then keep this line:
+  videos: [{title: "Kit demo video", src: "media/demo-video.mp4"}]
+};
+
+const SNIPPETS = JSON.parse(document.getElementById('snippets').textContent);
+const MODULES = ['start','setup','esp32','motors','remote','mqtt','nodered','reference'];
+const store = {
+  get(k, d){ try{ const v = localStorage.getItem('robotlab.'+k); return v === null ? d : JSON.parse(v); }catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem('robotlab.'+k, JSON.stringify(v)); return true; }catch(e){ return false; } }
+};
+
+/* ---------- toast ---------- */
+let toastTimer;
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
+
+/* ---------- settings ---------- */
+const DEFAULTS = {TEAM:'team01', WIFI_SSID:'ClassroomWiFi', WIFI_PASS:'password123', BROKER:'192.168.1.100'};
+let settings = Object.assign({}, DEFAULTS, store.get('settings', {}));
+const fieldMap = {setTeam:'TEAM', setSsid:'WIFI_SSID', setPass:'WIFI_PASS', setBroker:'BROKER'};
+const cleanId = s => (s||'').replace(/[^A-Za-z0-9._-]/g,'');
+const cStr = s => (s||'').replace(/\\/g,'\\\\').replace(/"/g,'\\"');
+function personalize(code, lang){
+  const team = cleanId(settings.TEAM) || DEFAULTS.TEAM;
+  const broker = cleanId(settings.BROKER) || DEFAULTS.BROKER;
+  const esc = lang === 'json' ? (s => JSON.stringify(s).slice(1,-1)) : (lang === 'cpp' ? cStr : (s=>s));
+  return code.replaceAll('{{TEAM}}', team).replaceAll('{{BROKER}}', broker)
+             .replaceAll('{{WIFI_SSID}}', esc(settings.WIFI_SSID)).replaceAll('{{WIFI_PASS}}', esc(settings.WIFI_PASS));
+}
+function initSettings(){
+  for (const [id,key] of Object.entries(fieldMap)){
+    const el = document.getElementById(id);
+    el.value = settings[key];
+    el.addEventListener('input', () => {
+      settings[key] = el.value;
+      const saved = store.set('settings', settings);
+      document.getElementById('settingsNote').textContent = saved ? 'Saved in this browser. All code below is updated.' : 'Updated for this visit (this browser blocks saving).';
+      refreshVars(); renderAllCode();
+    });
+  }
+  document.getElementById('teamChip').addEventListener('click', () => {
+    location.hash = '#start';
+    setTimeout(()=>{ document.getElementById('settingsCard').scrollIntoView({behavior:'smooth', block:'center'}); document.getElementById('setTeam').focus(); }, 60);
+  });
+  refreshVars();
+}
+function refreshVars(){
+  const team = cleanId(settings.TEAM) || DEFAULTS.TEAM;
+  document.getElementById('teamChipName').textContent = team;
+  document.querySelectorAll('[data-var]').forEach(el => {
+    const k = el.dataset.var; el.textContent = k==='TEAM' ? team : (k==='BROKER' ? (cleanId(settings.BROKER)||DEFAULTS.BROKER) : settings[k]);
+  });
+}
+
+/* ---------- code blocks ---------- */
+const LANG_LABEL = {cpp:'Arduino C++', json:'Node-RED JSON', bash:'Command', ini:'Config', none:'Text'};
+function renderCode(box){
+  const s = SNIPPETS[box.dataset.snippet]; if(!s) return;
+  const code = personalize(s.code, s.lang);
+  if(!box.dataset.built){
+    box.innerHTML = '';
+    const bar = document.createElement('div'); bar.className='code-bar';
+    bar.innerHTML = '<span class="fname"></span><span class="lang"></span>';
+    bar.querySelector('.fname').textContent = s.file;
+    bar.querySelector('.lang').textContent = LANG_LABEL[s.lang]||s.lang;
+    if (s.download){
+      const d = document.createElement('button'); d.className='btn btn-ghost'; d.type='button';
+      d.textContent = 'Download'; d.addEventListener('click', ()=>downloadSnippet(box.dataset.snippet));
+      bar.appendChild(d);
+    }
+    const c = document.createElement('button'); c.className='btn btn-copy'; c.type='button'; c.textContent='Copy';
+    c.addEventListener('click', ()=>copyText(personalize(SNIPPETS[box.dataset.snippet].code, s.lang), c));
+    bar.appendChild(c);
+    const pre = document.createElement('pre'); const el = document.createElement('code'); pre.appendChild(el);
+    box.append(bar, pre);
+    const lines = code.split('\n').length;
+    if (lines > 24 && !box.classList.contains('short')){
+      const foot = document.createElement('div'); foot.className='code-foot';
+      const b = document.createElement('button'); b.type='button'; b.textContent = 'Show all '+lines+' lines';
+      b.addEventListener('click', ()=>{ const ex = box.classList.toggle('expanded'); b.textContent = ex ? 'Show less' : 'Show all '+lines+' lines'; });
+      foot.appendChild(b); box.appendChild(foot);
+    } else box.classList.add('short');
+    box.dataset.built = '1';
+  }
+  const el = box.querySelector('pre code');
+  const grammar = window.Prism && Prism.languages[s.lang];
+  if (grammar) el.innerHTML = Prism.highlight(code, grammar, s.lang); else el.textContent = code;
+}
+function renderAllCode(){ document.querySelectorAll('[data-snippet]').forEach(renderCode); }
+
+async function copyText(text, btn){
+  let ok = false;
+  try { await navigator.clipboard.writeText(text); ok = true; }
+  catch(e){
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly',''); ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    try { ok = document.execCommand('copy'); } catch(_) {}
+    ta.remove();
+  }
+  if (ok){ btn.textContent='Copied ✓'; btn.classList.add('ok'); setTimeout(()=>{btn.textContent='Copy'; btn.classList.remove('ok');},1600); toast('Copied. Paste it with Ctrl+V'); }
+  else toast('Copy was blocked here. Select the code and press Ctrl+C.');
+}
+
+/* ---------- downloads ---------- */
+let dlApi = null;
+(async () => { try { if (window.claude && typeof window.claude.use === 'function') dlApi = await window.claude.use('downloads'); } catch(e){ dlApi = null; } })();
+async function saveFile(filename, data){
+  if (dlApi){
+    try { await dlApi.save({filename, data}); toast('Saved '+filename); return; }
+    catch(e){ if (e && e.code === 'declined') { toast('Download cancelled'); return; } if (e && e.code === 'rate_limited'){ toast('One moment, then try again'); return; } }
+  }
+  try {
+    const blob = data instanceof Blob ? data : new Blob([data]);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+    toast('Downloading '+filename+'. If nothing happens, use Copy instead.');
+  } catch(e){ toast('Downloads are blocked here. Use Copy instead.'); }
+}
+function sketchName(file){ return file.replace(/\.ino$/,''); }
+async function downloadSnippet(id){
+  const s = SNIPPETS[id]; const code = personalize(s.code, s.lang);
+  if (s.download === 'sketch'){
+    if (!window.JSZip){ toast('Zip tool did not load. Use Copy instead.'); return; }
+    const z = new JSZip(); const n = sketchName(s.file);
+    z.file(n+'/'+s.file, code);
+    saveFile(n+'.zip', await z.generateAsync({type:'blob'}));
+  } else saveFile(s.file, code);
+}
+async function downloadKit(){
+  if (!window.JSZip){ toast('Zip tool did not load.'); return; }
+  const files = ['ESP32_Camera_4WD_Robot_Car_OV3660_V3.ino','app_httpd.cpp','camera_index.h'];
+  const z = new JSZip(); const dir = 'ESP32_Camera_4WD_Robot_Car_OV3660_V3/';
+  try {
+    for (const f of files){ const r = await fetch('kit/'+f+'.txt'); if(!r.ok) throw new Error(f); z.file(dir+f, await r.text()); }
+  } catch(e){ toast('Could not load the kit files. Try again.'); return; }
+  saveFile('ESP32_Camera_4WD_Robot_Car_Main_Code.zip', await z.generateAsync({type:'blob'}));
+}
+async function downloadAll(){
+  if (!window.JSZip){ toast('Zip tool did not load.'); return; }
+  const z = new JSZip();
+  for (const [id,s] of Object.entries(SNIPPETS)){
+    if (s.download === 'sketch'){ const n = sketchName(s.file); z.file('Robot_Lab_Sketches/'+n+'/'+s.file, personalize(s.code, s.lang)); }
+    if (s.download === 'file'){ z.file('Robot_Lab_Sketches/node-red/'+s.file, personalize(s.code, s.lang)); }
+  }
+  saveFile('Robot_Lab_Sketches_'+(cleanId(settings.TEAM)||'team')+'.zip', await z.generateAsync({type:'blob'}));
+}
+document.addEventListener('click', e => {
+  const k = e.target.closest('[data-dl]'); if (k){ if (k.dataset.dl==='kitzip') downloadKit(); if (k.dataset.dl==='allzip') downloadAll(); }
+  const sn = e.target.closest('[data-dl-snippet]'); if (sn) downloadSnippet(sn.dataset.dlSnippet);
+});
+
+/* ---------- manual + videos ---------- */
+function initMedia(){
+  if (CONFIG.manualUrl){
+    const box = document.getElementById('manualLinks'); box.innerHTML = '';
+    const a = document.createElement('a'); a.className='btn btn-primary'; a.href = CONFIG.manualUrl; a.target='_blank'; a.rel='noopener'; a.textContent='Open PDF';
+    const b = document.createElement('button'); b.className='btn btn-outline'; b.type='button'; b.textContent='Download';
+    b.addEventListener('click', async ()=>{ try{ const r = await fetch(CONFIG.manualUrl); saveFile('ESP32_Camera_4WD_Robot_Car_Kit_Manual.pdf', await r.blob()); }catch(e){ toast('Could not fetch the PDF. Use Open PDF.'); } });
+    box.append(a, b);
+  }
+  const list = document.getElementById('videoList');
+  if (CONFIG.videos.length){
+    CONFIG.videos.forEach(v => { const h = document.createElement('h4'); h.textContent = v.title; const vid = document.createElement('video'); vid.controls = true; vid.preload='metadata'; vid.src = v.src; list.append(h, vid); });
+  } else list.hidden = true;
+  const input = document.getElementById('localVideo'), player = document.getElementById('localPlayer');
+  input.addEventListener('change', () => {
+    const f = input.files && input.files[0]; if(!f) return;
+    player.src = URL.createObjectURL(f); player.hidden = false; document.getElementById('localVideoName').textContent = f.name;
+  });
+}
+
+/* ---------- progress ---------- */
+let done = store.get('done', {});
+function initLabs(){
+  document.querySelectorAll('article.lab[data-lab]').forEach(lab => {
+    const id = lab.dataset.lab;
+    const lbl = document.createElement('label'); lbl.className='done-toggle';
+    const cb = document.createElement('input'); cb.type='checkbox'; cb.id='done-'+id; cb.checked = !!done[id];
+    lbl.htmlFor = cb.id; lbl.append(cb, document.createTextNode(' Mark done'));
+    lab.querySelector('.lab-head').appendChild(lbl);
+    lab.classList.toggle('is-done', cb.checked);
+    cb.addEventListener('change', () => { done[id] = cb.checked; store.set('done', done); lab.classList.toggle('is-done', cb.checked); updateProgress(); if(cb.checked) toast('Nice work! ✓'); });
+  });
+  updateProgress();
+}
+function updateProgress(){
+  MODULES.forEach(m => {
+    const labs = [...document.querySelectorAll('article.lab[data-mod="'+m+'"]')];
+    const el = document.querySelector('[data-prog="'+m+'"]'); if(!el || !labs.length) return;
+    const n = labs.filter(l => done[l.dataset.lab]).length;
+    el.textContent = n+'/'+labs.length; el.classList.toggle('done', n === labs.length);
+  });
+}
+
+/* ---------- direction explorer ---------- */
+const DIRS = {
+  forward:{l:'▲', r:'▲', text:'Both sides spin forward at the same speed, so the robot rolls straight ahead.'},
+  backward:{l:'▼', r:'▼', text:'Both sides spin backward. The PWM moves to the other input of each pair.'},
+  left:{l:'▼', r:'▲', text:'Left side backward, right side forward: the robot spins left on the spot (a "tank turn").'},
+  right:{l:'▲', r:'▼', text:'Left side forward, right side backward: the robot spins right on the spot.'},
+  stop:{l:'■', r:'■', text:'All four inputs at 0: the motors coast to a stop.'}
+};
+function setDir(d){
+  document.querySelectorAll('.dir-btns button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.dir===d)));
+  document.querySelectorAll('#dirTable tr[data-row]').forEach(r => r.classList.toggle('hl', r.dataset.row===d));
+  ['wl1','wl2'].forEach(id => document.getElementById(id).textContent = DIRS[d].l);
+  ['wr1','wr2'].forEach(id => document.getElementById(id).textContent = DIRS[d].r);
+  document.getElementById('robotMove').textContent = d.toUpperCase();
+  document.getElementById('dirExplain').textContent = DIRS[d].text;
+}
+document.querySelectorAll('.dir-btns button').forEach(b => b.addEventListener('click', ()=>setDir(b.dataset.dir)));
+
+/* ---------- routing ---------- */
+function route(){
+  let r = (location.hash||'').replace('#','');
+  if (!MODULES.includes(r)) r = 'start';
+  document.querySelectorAll('section.module').forEach(s => s.classList.toggle('show', s.dataset.route === r));
+  document.querySelectorAll('[data-nav]').forEach(a => { const on = a.dataset.nav === r; a.classList.toggle('active', on); if(on) a.setAttribute('aria-current','page'); else a.removeAttribute('aria-current'); });
+  document.getElementById('sideNav').classList.remove('open');
+  document.getElementById('menuBtn').setAttribute('aria-expanded','false');
+  window.scrollTo(0,0);
+}
+window.addEventListener('hashchange', route);
+document.getElementById('menuBtn').addEventListener('click', () => {
+  const nav = document.getElementById('sideNav'); const open = nav.classList.toggle('open');
+  document.getElementById('menuBtn').setAttribute('aria-expanded', String(open));
+});
+
+/* ---------- save as PDF ---------- */
+const PDF_LIBS = [
+  ['html2canvas', 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'],
+  ['jspdf', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js']
+];
+const MODULE_TITLES = {start:'Start here', setup:'1 · Set up your PC', esp32:'2 · ESP32-CAM basics', motors:'3 · Motors & wiring',
+  remote:'4 · Phone & PC control', mqtt:'5 · MQTT', nodered:'6 · Node-RED control', reference:'Cheat sheet & files'};
+let pdfBusy = false;
+function loadScript(src){
+  return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(s); });
+}
+async function ensurePdfLibs(){
+  if (!window.html2canvas) await loadScript(PDF_LIBS[0][1]);
+  if (!(window.jspdf && window.jspdf.jsPDF)) await loadScript(PDF_LIBS[1][1]);
+}
+function pdfProgress(text, frac){
+  document.getElementById('pdfStatus').textContent = text;
+  document.getElementById('pdfBar').style.width = Math.round(Math.max(0, Math.min(1, frac)) * 100) + '%';
+}
+// Split a module into printable blocks so page breaks fall between them.
+function blocksOf(section){
+  const out = [];
+  const stack = section.querySelector(':scope > .stack');
+  for (const el of stack.children){
+    if (el.matches('article.lab')){
+      out.push({el: el.querySelector('.lab-head'), keepWithNext: true});
+      for (const c of el.querySelector('.lab-body').children) out.push({el: c});
+    } else if (el.matches('details.more')){
+      out.push({el: el.querySelector('summary'), keepWithNext: true});
+      for (const c of el.querySelector(':scope > div').children) out.push({el: c});
+    } else if (el.matches('h2,h3')){
+      out.push({el, keepWithNext: true});
+    } else out.push({el});
+  }
+  return out;
+}
+const PDF_SKIP = ['btn', 'done-toggle', 'code-foot', 'pager', 'pdf-overlay', 'toast'];
+function pdfIgnore(el){ return !!(el.classList && PDF_SKIP.some(c => el.classList.contains(c))) || el.tagName === 'VIDEO' || (el.type === 'file'); }
+// SVG drawn by html2canvas loses page CSS, so copy the resolved colours and fonts inline.
+function pdfOnClone(doc){
+  doc.querySelectorAll('svg, svg *').forEach(el => {
+    const cs = doc.defaultView.getComputedStyle(el);
+    if (el.tagName.toLowerCase() === 'svg') return;
+    el.style.fill = cs.fill; el.style.stroke = cs.stroke;
+    if (el.tagName.toLowerCase() === 'text'){ el.style.fontFamily = cs.fontFamily; el.style.fontWeight = cs.fontWeight; }
+  });
+}
+// Find a cut row near `want` (canvas px) where every sampled pixel matches: a gap between lines.
+function findGap(canvas, from, want){
+  const ctx = canvas.getContext('2d', {willReadFrequently: true});
+  const minY = Math.max(from + 40, Math.floor(want - (want - from) * 0.3));
+  for (let y = Math.floor(want); y > minY; y--){
+    const row = ctx.getImageData(0, y, canvas.width, 1).data;
+    const r0 = row[0], g0 = row[1], b0 = row[2]; let same = true;
+    for (let x = 0; x < row.length; x += 16){ if (Math.abs(row[x]-r0) + Math.abs(row[x+1]-g0) + Math.abs(row[x+2]-b0) > 24){ same = false; break; } }
+    if (same) return y;
+  }
+  return Math.floor(want);
+}
+function sliceToJpeg(canvas, y0, y1){
+  const c = document.createElement('canvas'); c.width = canvas.width; c.height = Math.max(1, y1 - y0);
+  const ctx = c.getContext('2d'); ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(canvas, 0, y0, canvas.width, c.height, 0, 0, canvas.width, c.height);
+  return c.toDataURL('image/jpeg', 0.9);
+}
+async function makePdf(which){
+  if (pdfBusy) return; pdfBusy = true;
+  document.getElementById('pdfMenu').hidden = true; document.getElementById('pdfBtn').setAttribute('aria-expanded','false');
+  const overlay = document.getElementById('pdfOverlay'); overlay.hidden = false; pdfProgress('Loading tools', 0.02);
+  const current = MODULES.includes((location.hash||'').slice(1)) ? location.hash.slice(1) : 'start';
+  const list = which === 'all' ? MODULES : [current];
+  const root = document.documentElement; const prevTheme = root.getAttribute('data-theme');
+  const opened = [...document.querySelectorAll('details.more:not([open])')];
+  const saveName = which === 'all' ? 'Robot-Lab-Full-Course' : 'Robot-Lab-' + current;
+  try {
+    await ensurePdfLibs();
+    root.setAttribute('data-theme', 'light'); document.body.classList.add('pdf-mode');
+    opened.forEach(d => d.open = true);
+    window.scrollTo(0, 0);
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({unit: 'mm', format: 'a4', compress: true});
+    const PW = 210, PH = 297, M = 14, CW = PW - 2 * M, TOP = M, BOTTOM = PH - M - 6;
+    const REF_W = 860;                       // css px that map onto the content width
+    const mmPerCss = CW / REF_W, GAP = 3.2;
+    let y = TOP, firstPage = true, pageStartModule = [];
+
+    const allBlocks = list.map(m => ({m, blocks: null}));
+    let total = 0;
+    allBlocks.forEach(g => { const sec = document.querySelector('section[data-route="' + g.m + '"]'); g.sec = sec; });
+    for (const g of allBlocks){ g.sec.classList.add('show'); g.blocks = blocksOf(g.sec).filter(b => b.el && b.el.offsetHeight > 0 && !pdfIgnore(b.el)); total += g.blocks.length; if (g.m !== current || which === 'all') g.sec.classList.remove('show'); }
+    let doneCount = 0;
+
+    for (const g of allBlocks){
+      document.querySelectorAll('section.module').forEach(s => s.classList.toggle('show', s === g.sec));
+      // make sure lazy images in this module have loaded before drawing them
+      await Promise.all([...g.sec.querySelectorAll('img')].map(img => {
+        img.loading = 'eager';
+        if (img.complete && img.naturalWidth) return null;
+        return new Promise(r => { img.addEventListener('load', r, {once: true}); img.addEventListener('error', r, {once: true}); setTimeout(r, 6000); });
+      }));
+      if (!firstPage){ pdf.addPage(); y = TOP; }
+      pageStartModule[pdf.getNumberOfPages()] = g.m;
+      firstPage = false;
+      for (let i = 0; i < g.blocks.length; i++){
+        const b = g.blocks[i];
+        pdfProgress((MODULE_TITLES[g.m] || g.m) + ' · ' + (doneCount + 1) + ' of ' + total, doneCount / total);
+        const rect = b.el.getBoundingClientRect();
+        let scale = 2; const area = rect.width * rect.height * 4;
+        if (area > 14e6) scale = Math.max(1, Math.sqrt(14e6 / (rect.width * rect.height)));
+        const canvas = await html2canvas(b.el, {scale, backgroundColor: '#ffffff', logging: false, useCORS: true,
+          windowWidth: 1280, ignoreElements: pdfIgnore, onclone: pdfOnClone});
+        doneCount++;
+        if (!canvas.width || !canvas.height) continue;
+        const cssW = canvas.width / scale, cssH = canvas.height / scale;
+        const wMm = cssW * mmPerCss, hMm = cssH * mmPerCss;
+        // keep headings with the block after them
+        let need = hMm;
+        if (b.keepWithNext && g.blocks[i + 1]) need += Math.min(40, g.blocks[i + 1].el.getBoundingClientRect().height * mmPerCss);
+        if (need > BOTTOM - y && y > TOP + 1 && hMm <= BOTTOM - TOP){ pdf.addPage(); y = TOP; pageStartModule[pdf.getNumberOfPages()] = g.m; }
+        if (hMm <= BOTTOM - y){
+          pdf.addImage(sliceToJpeg(canvas, 0, canvas.height), 'JPEG', M, y, wMm, hMm, undefined, 'FAST');
+          y += hMm + GAP;
+        } else {
+          // taller than the space left: slice at gaps between text lines
+          const pxPerMm = scale / mmPerCss; let off = 0;
+          while (off < canvas.height - 1){
+            let avail = BOTTOM - y;
+            if (avail < 25){ pdf.addPage(); y = TOP; avail = BOTTOM - y; pageStartModule[pdf.getNumberOfPages()] = g.m; }
+            let cut = off + avail * pxPerMm;
+            if (cut >= canvas.height) cut = canvas.height; else cut = findGap(canvas, off, cut);
+            const sliceMm = (cut - off) / pxPerMm;
+            pdf.addImage(sliceToJpeg(canvas, off, cut), 'JPEG', M, y, wMm, sliceMm, undefined, 'FAST');
+            y += sliceMm + GAP; off = cut;
+            if (off < canvas.height - 1){ pdf.addPage(); y = TOP; pageStartModule[pdf.getNumberOfPages()] = g.m; }
+          }
+        }
+        await new Promise(r => setTimeout(r, 0));   // let the progress bar repaint
+      }
+    }
+    // footer on every page
+    const n = pdf.getNumberOfPages(); let mod = list[0];
+    const team = cleanId(settings.TEAM) || DEFAULTS.TEAM;
+    for (let p = 1; p <= n; p++){
+      if (pageStartModule[p]) mod = pageStartModule[p];
+      pdf.setPage(p); pdf.setFontSize(8); pdf.setTextColor(110, 120, 128);
+      pdf.text('ESP32-CAM Robot Lab  ·  ' + (MODULE_TITLES[mod] || mod).replace('·', '-').replace('&', 'and') + '  ·  team ' + team, M, PH - 8);
+      pdf.text(p + ' / ' + n, PW - M, PH - 8, {align: 'right'});
+    }
+    pdfProgress('Saving', 1);
+    await saveFile(saveName + '.pdf', pdf.output('blob'));
+  } catch (e){
+    console.error(e);
+    toast('Could not make the PDF (' + (e && e.message ? e.message : 'error') + '). Check your internet and try again.');
+  } finally {
+    document.body.classList.remove('pdf-mode');
+    if (prevTheme === null) root.removeAttribute('data-theme'); else root.setAttribute('data-theme', prevTheme);
+    opened.forEach(d => d.open = false);
+    overlay.hidden = true; pdfBusy = false;
+    route();
+  }
+}
+document.getElementById('pdfBtn').addEventListener('click', e => {
+  e.stopPropagation();
+  const m = document.getElementById('pdfMenu'); m.hidden = !m.hidden;
+  document.getElementById('pdfBtn').setAttribute('aria-expanded', String(!m.hidden));
+});
+document.addEventListener('click', e => {
+  const p = e.target.closest('[data-pdf]'); if (p){ makePdf(p.dataset.pdf); return; }
+  if (!e.target.closest('.pdf-wrap')){ document.getElementById('pdfMenu').hidden = true; document.getElementById('pdfBtn').setAttribute('aria-expanded','false'); }
+});
+document.addEventListener('keydown', e => { if (e.key === 'Escape'){ document.getElementById('pdfMenu').hidden = true; document.getElementById('pdfBtn').setAttribute('aria-expanded','false'); } });
+
+initSettings();
+renderAllCode();
+initLabs();
+initMedia();
+setDir('forward');
+route();
+</script>
+</body>
+</html>
