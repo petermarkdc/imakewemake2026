@@ -255,7 +255,7 @@ body.pdf-mode .grid2{grid-template-columns:1fr 1fr}
       <button type="button" data-pdf="all"><b>Whole course</b><small>All modules + cheat sheet in one file</small></button>
     </div>
   </div>
-  <button class="team-chip" id="teamChip" title="Change your team settings">Team <b id="teamChipName">team01</b> · settings</button>
+  <button class="team-chip" id="teamChip" title="Change your team settings">Team <b id="teamChipName">student01</b> · settings</button>
 </header>
 
 <div class="shell">
@@ -296,7 +296,7 @@ body.pdf-mode .grid2{grid-template-columns:1fr 1fr}
       <p class="goal">Fill these in once. Every code block on this site updates with your values, so the code you copy is ready to upload. Your instructor will give you the team ID, WiFi and broker address.</p>
     </div>
     <div class="settings-grid">
-      <div class="field"><label for="setTeam">Team ID (letters/numbers)</label><input id="setTeam" autocomplete="off" spellcheck="false" value="team01"></div>
+      <div class="field"><label for="setTeam">Team ID (letters/numbers)</label><input id="setTeam" autocomplete="off" spellcheck="false" value="student01"></div>
       <div class="field"><label for="setSsid">Classroom WiFi name</label><input id="setSsid" autocomplete="off" spellcheck="false" value="ClassroomWiFi"></div>
       <div class="field"><label for="setPass">Classroom WiFi password</label><input id="setPass" autocomplete="off" spellcheck="false" value="password123"></div>
       <div class="field"><label for="setBroker">MQTT broker IP address</label><input id="setBroker" autocomplete="off" spellcheck="false" value="192.168.1.100"></div>
@@ -685,7 +685,7 @@ body.pdf-mode .grid2{grid-template-columns:1fr 1fr}
       <p class="goal"><b>Goal:</b> write the web server yourself: hold-to-drive buttons for phones, <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> keys for PCs, a speed slider, and a safety stop.</p>
       <div class="code" data-snippet="L8"></div>
       <ol class="steps">
-        <li><div><p>Upload. The Serial Monitor shows <b>Hotspot: Robot-<span data-var="TEAM">team01</span></b>.</p></div></li>
+        <li><div><p>Upload. The Serial Monitor shows <b>Hotspot: Robot-<span data-var="TEAM">student01</span></b>.</p></div></li>
         <li><div><p>Join that WiFi (password <code>robot1234</code>) and open <b>192.168.4.1</b>.</p></div></li>
         <li><div><p>Phone: hold the arrows. PC: hold <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> or the arrow keys.</p></div></li>
       </ol>
@@ -743,7 +743,7 @@ body.pdf-mode .grid2{grid-template-columns:1fr 1fr}
     <thead><tr><th>Word</th><th>Meaning</th><th>In our robot</th></tr></thead>
     <tbody>
       <tr><td><b>Broker</b></td><td>The post office. Receives every message and forwards it.</td><td>Mosquitto on the instructor's PC</td></tr>
-      <tr><td><b>Topic</b></td><td>The address on the envelope, like a folder path</td><td class="mono">imakewemake/robot/<span data-var="TEAM">team01</span>/cmd</td></tr>
+      <tr><td><b>Topic</b></td><td>The address on the envelope, like a folder path</td><td class="mono">imakewemake/robot/<span data-var="TEAM">student01</span>/cmd</td></tr>
       <tr><td><b>Publish</b></td><td>Send a message to a topic</td><td>Node-RED publishes <code>forward:800</code></td></tr>
       <tr><td><b>Subscribe</b></td><td>Ask the broker for every message on a topic</td><td>The robot subscribes to its <code>/cmd</code> topic</td></tr>
       <tr><td><b>Retained</b></td><td>The broker keeps the last message for newcomers</td><td><code>/online</code> stays "online" or "offline"</td></tr>
@@ -774,7 +774,7 @@ body.pdf-mode .grid2{grid-template-columns:1fr 1fr}
       <ol class="steps">
         <li><div><p>Install <b>MQTT Explorer</b> from <a href="https://mqtt-explorer.com" target="_blank" rel="noopener">mqtt-explorer.com</a>.</p></div></li>
         <li><div><p>New connection → Host <b><span data-var="BROKER">192.168.1.100</span></b>, Port <b>1883</b>, no username → <b>Connect</b>.</p></div></li>
-        <li><div><p>In the <b>Publish</b> panel, topic <code>imakewemake/robot/<span data-var="TEAM">team01</span>/cmd</code>, message <code>hello</code>, click <b>Publish</b>. It appears in the topic tree on the left.</p></div></li>
+        <li><div><p>In the <b>Publish</b> panel, topic <code>imakewemake/robot/<span data-var="TEAM">student01</span>/cmd</code>, message <code>hello</code>, click <b>Publish</b>. It appears in the topic tree on the left.</p></div></li>
         <li><div><p>Look at what other teams are publishing. That's the "many screens, one broker" idea.</p></div></li>
       </ol>
     </div>
@@ -986,7 +986,7 @@ let toastTimer;
 function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(toastTimer); toastTimer=setTimeout(()=>t.classList.remove('show'),2400); }
 
 /* ---------- settings ---------- */
-const DEFAULTS = {TEAM:'team01', WIFI_SSID:'ClassroomWiFi', WIFI_PASS:'password123', BROKER:'192.168.1.100'};
+const DEFAULTS = {TEAM:'student01', WIFI_SSID:'ClassroomWiFi', WIFI_PASS:'password123', BROKER:'192.168.1.100'};
 let settings = Object.assign({}, DEFAULTS, store.get('settings', {}));
 const fieldMap = {setTeam:'TEAM', setSsid:'WIFI_SSID', setPass:'WIFI_PASS', setBroker:'BROKER'};
 const cleanId = s => (s||'').replace(/[^A-Za-z0-9._-]/g,'');
